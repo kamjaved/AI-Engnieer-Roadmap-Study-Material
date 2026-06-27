@@ -1,0 +1,45 @@
+[project]
+name = "python-assignments"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "numpy>=2.5.0",
+  "openai>=2.44.0",
+  "protobuf>=7.35.1",
+  "python-dotenv>=1.2.2",
+  "rich>=15.0.0",
+  "sentencepiece>=0.2.1",
+  "tiktoken>=0.13.0",
+  "typer>=0.26.7",
+]
+
+[dependency-groups]
+dev = ["mypy>=2.1.0", "pytest>=9.1.1", "ruff>=0.15.19"]
+# ── Ruff configuration ─────────────────────────────────────────────────────
+[tool.ruff]
+line-length = 98
+
+[tool.ruff.lint]
+select = [
+  "E",   # pycodestyle errors
+  "F",   # pyflakes (unused imports, undefined names)
+  "I",   # isort (import ordering)
+  "UP",  # pyupgrade (suggest modern Python syntax)
+  "B",   # flake8-bugbear (common bugs and design problems)
+  "SIM", # flake8-simplify (suggests simpler code)
+]
+# Ignore specific rules that conflict with AI/ML patterns
+ignore = ["E501"] # Line length handled by formatter, not linter
+
+[tool.ruff.format]
+# Match Black's quote style so diff noise is minimal if you ever migrate
+quote-style = "double"
+indent-style = "space"
+
+# ── Mypy (strict type checking for CI) ────────────────────────────────────
+[tool.mypy]
+python_version = "3.12"
+strict = false                # Set to true as your type coverage grows
+ignore_missing_imports = true # Many AI libs have incomplete stubs
