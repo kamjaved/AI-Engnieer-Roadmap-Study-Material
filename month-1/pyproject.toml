@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+  "fastapi[standard]>=0.139.0",
   "numpy>=2.5.0",
   "openai>=2.44.0",
   "protobuf>=7.35.1",
@@ -31,8 +32,8 @@ select = [
   "SIM", # flake8-simplify (suggests simpler code)
 ]
 # Ignore specific rules that conflict with AI/ML patterns
-ignore = ["E501"] # Line length handled by formatter, not linter
-
+ignore = ["E501"]    # Line length handled by formatter, not linter
+unfixable = ["F401"] # give warining to unused variable but won't delete it
 [tool.ruff.format]
 # Match Black's quote style so diff noise is minimal if you ever migrate
 quote-style = "double"

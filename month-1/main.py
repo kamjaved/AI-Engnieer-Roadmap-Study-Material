@@ -1,19 +1,20 @@
-from tokenizer_explorer.tokenizers import tokenize
-from tokenizer_explorer.multilingual import explore_multilingual, MULTILINGUAL_SAMPLES
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-# def main():
-#     print("Hello from python-assignments!")
+from fast_api_traversy.middleware.timer import timing_middleware
+from fast_api_traversy.routes.basic_routes import router as basic_router
+from fast_api_traversy.routes.issues import router as issues_router
 
-
-if __name__ == "__main__":
-    print("\n--- PART 2: Tokenizer Wrapper Sanity Check ---")
-    result = tokenize("Hello, how are you?", "gpt-4")
-    print(f"Model: {result.model_name} | Tokens: {result.token_count}")
-    print(f"IDs:     {result.token_ids}")
-    print(f"Strings: {result.tokens}")
-
-    print("\n--- PART 3: Multilingual Token Exploration ---")
-    explore_multilingual(MULTILINGUAL_SAMPLES)
-
-    # print("\n--- PART 4: Cosine Similarity Exploration ---")
-    # explore_similarity(SIMILARITY_SAMPLES)
+app = FastAPI()
+# Middlewares
+app.middleware("http")(timing_middleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  #
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+# Routes
+app.include_router(basic_router)
+app.include_router(issues_router)
