@@ -1,23 +1,19 @@
 [project]
-name = "python-assignments"
+name = "openai-sdk"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
-  "fastapi[standard]>=0.139.0",
-  "numpy>=2.5.0",
-  "openai>=2.44.0",
-  "protobuf>=7.35.1",
-  "python-dotenv>=1.2.2",
-  "rich>=15.0.0",
-  "sentencepiece>=0.2.1",
-  "tiktoken>=0.13.0",
-  "typer>=0.26.7",
+    "fastapi[standard]>=0.139.0",
+    "numpy>=2.5.0",
+    "openai>=2.44.0",
+    "pydantic-settings>=2.14.2",
 ]
 
 [dependency-groups]
-dev = ["mypy>=2.1.0", "pytest>=9.1.1", "ruff>=0.15.19"]
+dev = ["dotenv>=0.9.9", "pytest>=9.1.1", "ruff>=0.15.19"]
+
 # ── Ruff configuration ─────────────────────────────────────────────────────
 [tool.ruff]
 line-length = 98
@@ -46,6 +42,4 @@ strict = false                # Set to true as your type coverage grows
 ignore_missing_imports = true # Many AI libs have incomplete stubs
 
 [tool.uv.workspace]
-members = [
-    "openai_sdk",
-]
+members = ["openai_sdk"]
