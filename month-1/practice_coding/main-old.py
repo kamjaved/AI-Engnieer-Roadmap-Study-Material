@@ -1,5 +1,5 @@
-from tokenizer_explorer.tokenizers import tokenize
-from tokenizer_explorer.multilingual import explore_multilingual, MULTILINGUAL_SAMPLES
+from practice.tokenizer_explorer.tokenizers import tokenize
+from practice.tokenizer_explorer.multilingual import explore_multilingual, MULTILINGUAL_SAMPLES
 
 # def main():
 #     print("Hello from python-assignments!")

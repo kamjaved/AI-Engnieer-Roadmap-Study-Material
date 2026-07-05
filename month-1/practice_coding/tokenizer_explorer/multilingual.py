@@ -1,4 +1,4 @@
-from tokenizer_explorer.tokenizers import tokenize
+from practice.tokenizer_explorer.tokenizers import tokenize
 
 type MultiLangDict = dict[str, dict[str, str]]
 
