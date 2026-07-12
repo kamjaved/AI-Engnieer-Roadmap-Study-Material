@@ -46,22 +46,41 @@ See `docs/lesson-notes.md` for the full writeup, including the checkpoint-granul
 
 ---
 
-## Lesson 4 — LangGraph Postgres Checkpointing & Thread Recovery — 🔄 IN PROGRESS
+## Lesson 4 — LangGraph Postgres Checkpointing & Thread Recovery — ✅ COMPLETE
 
-- [ ] 4.1 Pooled `AsyncConnectionPool` (psycopg3, from `psycopg_pool`) created at FastAPI startup, opened at startup and closed/disposed at shutdown
-- [ ] 4.2 `AsyncPostgresSaver(pool)` instantiated, `.setup()` called once at startup (idempotent — creates the checkpointer's own tables)
-- [ ] 4.3 `agent/graph.py` recompiled with `checkpointer=checkpointer`
-- [ ] 4.4 `api/routes_chat.py` confirmed unchanged in behavior — still sends only the new `HumanMessage`, but this now becomes *correct* because the checkpointer reloads prior state before the reducer runs
-- [ ] 4.5 `GET /debug/threads/{thread_id}/checkpoint` added — calls `graph.aget_state(config)`, returns the raw state
-- [ ] 4.6 Done-When check #1: chat, then a follow-up depending on turn 1, in the same `thread_id` — correct answer this time (memory works)
-- [ ] 4.7 Done-When check #2: stop the FastAPI process, restart it, continue the same `thread_id` — agent still has full context, zero code re-sending prior messages
-- [ ] 4.8 Compare `GET /debug/threads/{thread_id}/checkpoint` against the raw `messages` table for the same thread — two structurally different representations of "the conversation so far"
-- [ ] 4.9 Concept explain-back: why the checkpointer needing its own separate tables (not `messages`) is a deliberate design, not duplication — one is durable execution state (resumable mid-tool-call), the other is the audit-friendly transcript
+- [x] 4.1 Pooled `AsyncConnectionPool` (psycopg3, from `psycopg_pool`) created at FastAPI startup, opened at startup and closed/disposed at shutdown — hit and fixed a SQLAlchemy-URL-vs-psycopg-URL mismatch along the way (see `docs/lesson-notes.md`)
+- [x] 4.2 `AsyncPostgresSaver(pool)` instantiated, `.setup()` called once at startup (idempotent — creates the checkpointer's own tables) — confirmed via pgAdmin: 4 new tables created, all blank immediately after `.setup()`
+- [x] 4.3 `agent/graph.py` recompiled with `checkpointer=checkpointer`
+- [x] 4.4 `api/routes_chat.py` confirmed unchanged in behavior — already threaded `req.thread_id` into the invoke config from Lesson 3, so it needed zero changes to become correct
+- [x] 4.5 `GET /debug/threads/{thread_id}/checkpoint` added — calls `graph.aget_state(config)`, returns the raw state — confirmed correct message counts for a valid thread, blank state for an invalid one
+- [x] 4.6 Done-When check #1: chat, then a follow-up depending on turn 1, in the same `thread_id` — correct answer this time (memory works)
+- [x] 4.7 Done-When check #2: stopped the FastAPI process outright, restarted it, continued the same `thread_id` — agent still had full context, zero code re-sending prior messages
+- [x] 4.8 Compared `GET /debug/threads/{thread_id}/checkpoint` against the raw `messages` table for the same thread — found and explained a real count mismatch (6 rows vs. `message_count: 8`), correctly traced to one tool-call round trip the checkpointer captures but the route never persists to `messages`
+- [x] 4.9 Concept explain-back: why the checkpointer needing its own separate tables (not `messages`) is deliberate design, not duplication — correctly identified the data-type/access-path differences, supplemented with the deeper separation-of-concerns and portability reasoning; also worked through the significance of `next_node`
+
+See `docs/lesson-notes.md` for the full writeup of concepts, decisions, and bugs from this lesson.
+
+---
+
+## Lesson 5 — Manual Summarization From Scratch — 🔄 IN PROGRESS
+
+*(Flagship lesson of the course, per the roadmap — build this by hand before Lesson 6's LangMem shortcut.)*
+
+- [ ] 5.1 `memory/manual_summarizer.py` written — `maybe_summarize(db, thread_id)`: if more than 10 messages exist since the last summary's `covered_until_message_id` (or since thread start if no summary exists yet), summarize all but the most recent 6 messages in one LLM call, persist a new row to `summaries` (`thread_id`, `summary_text`, `covered_until_message_id`, `strategy='manual'`)
+- [ ] 5.2 `get_context_for_turn(db, thread_id, current_message)` written — returns a system message (base prompt + latest summary text if one exists) + the most recent 6 raw messages from `messages` + the current user message as a `HumanMessage`
+- [ ] 5.3 `api/routes_chat.py` wired: `maybe_summarize()` called *before* `get_context_for_turn()` on every `POST /chat`, and the graph's input `messages` becomes the assembled context list — not just the single new `HumanMessage` like Lessons 3–4
+- [ ] 5.4 `GET /debug/threads/{thread_id}/summary` added — returns the latest summary row, raw message count since it, and whether summarization would trigger on the next turn
+- [ ] 5.5 Done-When check #1: a 12+ message conversation confirms a `summaries` row was created after message 11
+- [ ] 5.6 Done-When check #2: the debug endpoint shows the correct `covered_until_message_id`
+- [ ] 5.7 Done-When check #3: asking about something from early in the conversation gets answered correctly using the injected summary, not the now-excluded raw early messages
+- [ ] 5.8 Concept explain-back: why `covered_until_message_id` exists — the ordering guarantee that stops re-summarizing the same messages every turn (wasted LLM calls, drifting summaries) or double-counting
+- [ ] 5.9 Concept explain-back: why `maybe_summarize()` must run *before* `get_context_for_turn()`, never after
+- [ ] 5.10 Concept explain-back: why the checkpointer's own state (Lesson 4) and this manually-assembled context can silently diverge if you're not deliberate about which one feeds the graph — and the two ways to reconcile them (feed the graph only the trimmed context built here, vs. actively pruning checkpointed `messages` with `RemoveMessage`, which is what Lesson 6's LangMem node does)
 
 See `docs/lesson-notes.md` for the full writeup once this lesson is confirmed done.
 
 ---
 
-## Lessons 5–8 — not yet detailed
+## Lessons 6–8 — not yet detailed
 
-Will be broken into per-file checklists (same granularity as Lesson 1, 3, and 4) as we actually reach each one. Deliberately not pre-planning these in detail now — the file list may shift slightly as earlier lessons surface things (the way Lesson 1 grew a 1.8b we didn't originally plan for), and a stale forward-looking checklist is worse than none.
+Will be broken into per-file checklists (same granularity as Lesson 1, 3, 4, and 5) as we actually reach each one. Deliberately not pre-planning these in detail now — the file list may shift slightly as earlier lessons surface things (the way Lesson 1 grew a 1.8b we didn't originally plan for), and a stale forward-looking checklist is worse than none.

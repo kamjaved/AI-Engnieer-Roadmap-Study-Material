@@ -24,7 +24,10 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api.routes_chat import router as chat_router
+from app.api.routes_debug import router as debug_router
 from app.db.base import Base
+from app.db.checkpointer_pool import checkpointer, checkpointer_pool
 
 # These six imports look "unused" to a linter — you never reference User or
 # Sailing by name anywhere in this file. But importing them is what makes
@@ -64,18 +67,28 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+    # Open checkpointer pool: establishes min_size connections now so they're
+    # ready to use. Without this, the first request hits the pool startup cost.
+    await checkpointer_pool.open()
+
+    # Set up checkpointer schema: idempotent, creates tables on first run,
+    # near-instant no-op on every subsequent startup.
+    await checkpointer.setup()
+
     yield  # <-- the app serves requests while execution is paused here
 
-    # Shutdown: close every pooled connection cleanly instead of letting the
+    # Shutdown: close checkpointer pool gracefully first
+    await checkpointer_pool.close()
+
+    # Then close every pooled connection cleanly instead of letting the
     # process exit and leave connections dangling on the Postgres side.
     await engine.dispose()
 
 
-from app.api.routes_chat import router as chat_router
-
 app = FastAPI(title="Cruise Crash Course", lifespan=lifespan)
 
 app.include_router(chat_router)
+app.include_router(debug_router)
 
 
 @app.get("/health")

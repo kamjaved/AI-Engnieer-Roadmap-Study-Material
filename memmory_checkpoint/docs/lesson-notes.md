@@ -121,3 +121,70 @@ curl -X POST http://localhost:8000/chat \
 - 3.5 confirmed in the same data: "Are there any sailings on the Ocean Voyager?" → correct "no sailings" answer; immediately followed by "What was the fare on that one again?" → "Could you please specify which cruise or sailing you're referring to?" — clean proof the agent had zero memory of the first exchange.
 - 3.6 explain-back: root cause identified as "nothing about the previous turn is present in the input to the second call" — correctly named both valid remedies (a checkpointer auto-reinjecting prior state, *or* manually re-assembling and passing full history yourself), and correctly recognized these aren't independent bugs stacked together, they're two sides of one mechanism, with Lesson 4 wiring in the first and Lesson 5 wiring in the second.
 - Follow-up concept (checkpoint count for 40 exchanges, and whether turn 41 "contains" all 40 checkpoints) worked through using the video-game-save-file analogy above — resolved cleanly on the second pass after dialing back from a denser, more academic explanation style to a plainer, mentor-style one. That plain, one-idea-at-a-time, short-sentence explanation style is now the standing default for this course (recorded in `claude/teaching-preferences.md`).
+
+---
+
+## Lesson 4 — LangGraph Postgres Checkpointing & Thread Recovery
+
+### Key concepts learned
+- **Two separate connection pools, deliberately** — the SQLAlchemy `Engine` from Lesson 1 handles the app's own tables; a raw `psycopg_pool.AsyncConnectionPool` handles the checkpointer. `AsyncPostgresSaver` speaks raw `psycopg`, not SQLAlchemy, so it can't share the ORM's pool — two independent "fleets" against the same physical database.
+- **`psycopg_pool.AsyncConnectionPool` current best practice** — construct with `open=False`, then explicitly `await pool.open()` / `await pool.close()` inside FastAPI's `lifespan`. Implicit opening at construction time is deprecated in current `psycopg_pool` versions. `kwargs={"row_factory": dict_row, "autocommit": True}` is required by `AsyncPostgresSaver` internals — dict-style row access, and `.setup()`'s DDL needing to commit immediately.
+- **`AsyncPostgresSaver`** — LangGraph's Postgres implementation of the `BaseCheckpointSaver` interface (swap in `AsyncSqliteSaver` or an in-memory saver elsewhere without changing graph code). Takes the pool directly; one long-lived singleton instance, same rule as the engine.
+- **`.setup()` is idempotent *and* versioned** — unlike Lesson 1's `create_all()` (which only ever checks "does this table exist"), `.setup()` tracks schema version in its own `checkpoint_migrations` table and applies only missing migrations. Safe to call on every app startup for a single instance; flagged as a place production teams often instead run migrations as a one-off deploy step, to avoid multiple replicas racing on concurrent DDL.
+- **`compile(checkpointer=checkpointer)`** — turns on an automatic load → merge → save cycle around every `ainvoke()` call: load the latest checkpoint for the `thread_id` in `config`, merge the new input through the existing `add_messages` reducer, save the result back as the next checkpoint. Requires `config={"configurable": {"thread_id": ...}}` on every invoke — a compiled-with-checkpointer graph will error without it.
+- **`graph.aget_state(config)`** — read-only: does not run any node, just loads the latest checkpoint for a thread. Returns a `StateSnapshot` with `.values` (the state dict, e.g. `messages`) and `.next` (a tuple of node(s) that would run next). Empty tuple `()` = the graph reached a clean stop (`END`). A non-empty value would mean the graph was captured mid-execution — e.g. paused right after requesting a tool call but before running it — which is the exact mechanism that lets a mid-tool-call crash resume correctly instead of restarting the whole turn from scratch.
+- **How checkpoint data is actually stored** — `checkpoints` holds small JSON-ish metadata (thread_id, checkpoint_id, timestamps). `checkpoint_blobs` holds the heavy stuff — the actual message list — as `BYTEA` binary, packed by LangGraph's own serializer (not plain readable text). Not human-readable and not SQL-queryable by design; only LangGraph's own Python code ever unpacks it.
+- **Checkpoint vs. `messages` — empirically confirmed, not just theoretical** — for the same thread, `messages` showed 6 rows but the debug endpoint reported `message_count: 8`. Root cause: `routes_chat.py` only ever persists the user's message and the *final* assistant reply to `messages`. The checkpointer captures *everything* in `state["messages"]` after every step, unconditionally — so one tool-call round trip (the `AIMessage` requesting the tool + the `ToolMessage` with its result) shows up in the checkpoint but never in `messages`. Confirms `messages` is a deliberately partial transcript (final answers only), while the checkpoint is the only place the full step-by-step reasoning durably lives.
+- **Why separate tables is deliberate design, not duplication** — the data-type/access-path difference (binary vs. text, raw pool vs. SQLAlchemy ORM) is real but is a *symptom*, not the root cause. The actual reason: `messages` is a business-level, human-readable audit record, written by app code on the app's own schedule. The checkpoint tables are portable, library-owned execution state, written by LangGraph itself on every step, versioned independently via `checkpoint_migrations`. LangGraph's checkpointer ships identically to any app regardless of that app's own schema — it has no knowledge of `messages` and shouldn't need any, so that neither system's schema changes can ever break the other.
+
+### Important decisions & why
+- **`AsyncConnectionPool(open=False, ...)` + explicit `await pool.open()`/`await pool.close()` in `lifespan`** — matches current `psycopg_pool` guidance (avoids the deprecated implicit-open behavior) and the same "fail fast, explicit startup ordering" philosophy already used for the SQLAlchemy engine.
+- **Two separate `.env` URLs for Postgres** — one SQLAlchemy-dialect URL (`postgresql+psycopg://...`) for the existing engine, one plain psycopg/libpq URL (`postgresql://...`) for the checkpointer pool — rather than deriving one from the other via string manipulation. More explicit and less fragile than stripping `+psycopg` programmatically; each library gets exactly the format it expects.
+- **`min_size=5, max_size=20`** picked as a reasonable default for a single-instance crash-course app, with the explicit caveat that this isn't a universal number — real sizing has to account for Postgres's shared `max_connections` ceiling across *every* pool the app opens, multiplied by however many worker processes/replicas run concurrently.
+- **`.setup()` called on every app startup** rather than as a separate one-off migration step — fine for one process; flagged as worth revisiting once running multiple replicas, where concurrent DDL from several processes booting at once becomes a real race-condition risk.
+- **`checkpointer` and `checkpointer_pool` both defined in the same `checkpointer_pool.py`** — kept together deliberately since the checkpointer has no independent existence without its pool; avoided over-splitting into more files than the crash course needs.
+
+### Bugs hit and fixes
+1. **`AsyncConnectionPool` rejected the app's existing `DATABASE_URL`** — SQLAlchemy's connection URL uses dialect+driver notation (`postgresql+psycopg://...`), which is SQLAlchemy-only syntax, not something raw psycopg/libpq understands. `psycopg_pool` hands its `conninfo` straight to `psycopg.connect()`, which expects a plain libpq-style URL (`postgresql://...`). Fixed by adding a second, separate env var holding the plain psycopg-format URL, used only by `checkpointer_pool.py`, leaving the SQLAlchemy engine's URL untouched.
+
+### Commands used
+No new `uv add` — `langgraph-checkpoint-postgres` was already installed in Lesson 1.
+
+Confirming the checkpointer's schema after `.setup()`:
+```sql
+\dt
+-- 10 tables total: the original 6 app tables + checkpoints, checkpoint_blobs,
+-- checkpoint_writes, checkpoint_migrations (all blank immediately after .setup())
+```
+
+Manual memory + restart test, same `thread_id` throughout:
+```bash
+curl -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": 1, "thread_id": "thread_lesson4_test", "message": "Are there any sailings on the Ocean?"}'
+
+curl -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": 1, "thread_id": "thread_lesson4_test", "message": "What was the fare on that one again?"}'
+
+# Ctrl+C to kill the uvicorn process outright, then restart:
+uv run uvicorn app.main:app --reload --loop asyncio
+
+# same thread_id, referencing pre-restart context:
+curl -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": 1, "thread_id": "thread_lesson4_test", "message": "<follow-up referencing the earlier exchange>"}'
+```
+
+Debug endpoint, used throughout for inspection:
+```bash
+curl http://localhost:8000/debug/threads/thread_lesson4_test/checkpoint
+```
+
+### Self-check / confirmation results
+- 4.1–4.2 confirmed via pgAdmin: 4 new tables (`checkpoint_blobs`, `checkpoint_migrations`, `checkpoint_writes`, `checkpoints`) created alongside the original 6, all blank immediately after `.setup()` — expected, since `.setup()` only builds schema and doesn't write rows.
+- 4.3/4.4/4.6 confirmed together via one live test: two `/chat` calls, same `thread_id` — "Are there any sailings on the Ocean?" then "What was the fare on that one again?" — correctly resolved "that one" using prior turn's context. Confirmed `routes_chat.py` needed zero changes: it already threaded `req.thread_id` into `graph.ainvoke()`'s config from Lesson 3, so the fix was entirely on the `compile()` side.
+- 4.5 confirmed: valid `thread_id` returned all prior exchanges via the debug endpoint (14 exchanges at one point during testing); an invalid/never-used `thread_id` returned a blank state rather than an error — matches `aget_state()`'s documented behavior of returning an empty `StateSnapshot` instead of raising.
+- 4.7 confirmed: killed the uvicorn process outright (not relying on `--reload`), restarted it, sent a follow-up in the same `thread_id` referencing pre-restart context — correct answer, zero code re-sending prior messages. Proves the app itself is stateless; all memory lives in Postgres, independent of the FastAPI process's own lifetime.
+- 4.8 confirmed via direct comparison: `messages` showed 6 rows for a thread the debug endpoint reported `message_count: 8` for. Self-diagnosed correctly as one tool-call round trip (`AIMessage`-with-tool-call + `ToolMessage`) captured by the checkpointer but never persisted to `messages`. Also confirmed: `checkpoint_blobs` content isn't SQL-queryable (binary, not text), and role naming differs between the two systems (`assistant`/`user` in `messages` vs. `ai`/`human`/`tool` as LangChain's own message `.type` values).
+- 4.9 explain-back: initial answer correctly identified the data-type/schema mismatch and differing DB-access path (raw pool vs. SQLAlchemy ORM) as reasons for separate tables; supplemented with the deeper reason — separation of concerns (business-level audit record vs. portable, library-owned execution state) and portability (LangGraph's checkpointer schema has to work identically across any app regardless of that app's own tables). Also asked about and correctly resolved the significance of `next_node`: empty tuple `()` means the graph reached a clean stop (as seen in every checkpoint tested so far); a non-empty value would mean the graph was captured mid-execution, the exact mechanism that lets a mid-tool-call crash resume correctly rather than restarting the turn.

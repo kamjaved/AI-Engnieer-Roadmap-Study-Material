@@ -30,6 +30,10 @@ class Settings(BaseSettings):
         ...,  # "..." = required, no default. Missing env var -> ValidationError at startup.
         description="SQLAlchemy async connection string, e.g. postgresql+psycopg://...",
     )
+    psycopg_database_url: str = Field(
+        ...,
+        description="Raw psycopg connection string for LangGraph checkpointer, e.g. postgresql://...",
+    )
     openai_api_key: str = Field(
         ...,
         description="OpenAI API key consumed by langchain-openai's ChatOpenAI",

@@ -9,6 +9,7 @@ from typing_extensions import TypedDict
 
 from app.agent.tools import search_sailings
 from app.core.config import get_settings
+from app.db.checkpointer_pool import checkpointer
 
 settings = get_settings()
 
@@ -61,4 +62,4 @@ builder.add_edge("tools", "agent")
 # Deliberately NOT passing a checkpointer here — that's Lesson 4. Every
 # .ainvoke() call below starts from an empty `messages` list unless you
 # pass full history in yourself, which you are not doing yet either.
-graph = builder.compile()
+graph = builder.compile(checkpointer=checkpointer)
