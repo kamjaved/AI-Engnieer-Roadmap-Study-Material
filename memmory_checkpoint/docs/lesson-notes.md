@@ -53,4 +53,71 @@ uv run uvicorn app.main:app --reload --loop asyncio
 ---
 
 ## Lesson 2 — The Memory Mental Model
-*(to be filled in once the lesson is complete)*
+
+Conceptual lesson, no code. Goal: never conflate five terms that map 1:1 onto Lesson 1's schema (plus one table that doesn't exist yet).
+
+### The five terms
+- **Context** — the literal tokens sent to the LLM on *this* call. Ephemeral, assembled fresh every turn, never itself stored anywhere. Mental model: like props passed into a React component on a single render — built from current state, discarded once that render is done.
+- **Conversation history** — the raw, append-only log of everything exchanged in a thread. Lives in `messages`. Source of truth, never lossy, never edited.
+- **Short-term memory** — the thread-scoped *strategy* for turning history into context (which recent raw messages + which summary get sent this turn). Lives partly in `summaries`, partly in the checkpointer's state.
+- **Long-term memory** — durable, user-scoped facts that outlive any single thread. Lives in `long_term_memories`, retrieved by `user_id` across every future thread, not just the current one.
+- **Checkpoint** — a snapshot of LangGraph's own execution state (every state channel, not just messages), taken after each step the graph takes, keyed by `thread_id`. For crash recovery and mid-execution resumability — not something the application reads from directly, and not part of context assembly.
+
+### Core relationship (the one sentence worth memorizing)
+`messages` is truth → `summaries` is compressed truth for one thread → `long_term_memories` is durable truth across threads → the checkpoint is separate execution-state plumbing that happens to also durably hold a working copy of recent messages internally.
+
+### The one misconception worth remembering
+Self-check Q3 ("resume this conversation after a crash — which table?") was answered as `conversation_threads`, reasoning that its `thread_id` gets passed to the checkpointer. The `thread_id`-as-shared-key instinct was actually correct and important — but `conversation_threads` itself is only an application-level registry (which thread exists, which user owns it, which summary mode it uses). It holds **zero** information about what the graph was doing mid-execution.
+
+The real answer: **the checkpointer's own tables — separate ones, created in Lesson 4 via `checkpointer.setup()`, not any of the six tables built in Lesson 1.** They live in the same `langgraph_memmory` database but are a wholly separate schema that LangGraph manages internally; the app never writes to them directly, only through the checkpointer's API (`.put()`, `.get_tuple()`), called internally by `graph.ainvoke()` / `graph.aget_state()`.
+
+The precise mechanic: a checkpoint is written after **each step** the graph takes — not once per full user turn. A tool call is one step; the LLM processing that tool's result is another. That granularity is what lets LangGraph resume mid-tool-call after a crash, not just "replay the user's last message." The connective tissue between the app's own tables and LangGraph's separate ones is exactly the `thread_id` string — one shared key, two independent storage systems. That's the concrete version of "checkpoint ≠ conversation history, deliberately, not by accident."
+
+### Self-check results
+1. "Show me everything the user has ever said" → `messages`. Correct on first attempt.
+2. "Does the assistant know I prefer balcony cabins" → `long_term_memories`. Correct on first attempt, with the added (accurate) insight that this gets injected into context as instruction — correctly anticipating Lesson 7.
+3. "Resume this conversation after a crash" → corrected from `conversation_threads` to the checkpointer's own tables (see above).
+
+---
+
+## Lesson 3 — Minimal Tool-Calling Agent + Raw Transcript Persistence
+
+### Key concepts learned
+- **`@tool` decorator** — turns a plain async function into something an LLM can invoke. It does not execute anything itself; it generates a JSON schema from the function's type hints + docstring, and the model returns a message containing a *request* to call it with certain arguments. The docstring is the only contract the LLM has with the function — there's no compiler to catch drift the way TypeScript would catch an interface mismatch.
+- **`StateGraph` as a reducer** — the closest frontend analogy is `useReducer`/Redux: the graph has a typed `state` shape, nodes are functions that read the full state and return a *partial* update, and a reducer function decides how each key merges old + new. `add_messages` is LangGraph's built-in reducer for the `messages` key — it **appends**, it never overwrites, the same way a message-list reducer should never just replace the whole array on every dispatch.
+- **`ToolNode` + `tools_condition`** — `ToolNode` is the node that actually executes whatever tool the model asked for and turns the result into a `ToolMessage`. `tools_condition` is a conditional edge: it inspects the last message in `state["messages"]`, and routes to the tools node if it has `tool_calls`, or to `END` if not. This is the graph-structure equivalent of an `if/else` inside a reducer's dispatch logic.
+- **Checkpoint granularity, precisely** — a checkpoint is written after every graph *step*, not once per full user turn. A turn with no tool call is roughly one step (the agent node runs once). A turn where the model calls a tool is at least two steps: one where the model decides to call the tool, another where it reads the tool's result and replies. So across N message exchanges, the number of checkpoints is **N or more** — more, specifically, for every turn that involved a tool call — never fewer.
+- **How resuming from a checkpoint actually works** — the key mental model: each checkpoint is a full, cumulative snapshot of state as of that point, not a delta. Analogy that clicked: a video game save file. Every save contains your *entire* progress so far, not just the latest move — so resuming only ever needs the *one* most recent save file, never all previous ones stitched together. LangGraph works the same way: loading checkpoint #40 already contains everything from turns 1–40 baked in. Turn 41's new message gets appended on top via the `add_messages` reducer, and the **whole resulting list** — all 40 prior exchanges plus the new one — is what gets sent to the model.
+- **The real risk that follows from that** — a checkpointer has *no* concept of tokens, models, or context-window limits. It's dumb persistence: it saves whatever is in `state["messages"]`, however large that gets. Relying on a checkpointer alone, with no summarization, means every turn resends a larger and larger pile of history to the model — first as rising cost/latency, eventually as a hard context-window failure. This is *why* checkpointing (Lesson 4) and summarization (Lesson 5/6) are treated as two separate, independent mechanisms rather than one feature: checkpointing solves "does the graph survive a crash and remember," summarization solves "does what actually gets sent to the model stay a sane size." Solving the first does not solve the second.
+
+### Important decisions & why
+- **Hand-built `StateGraph` instead of `create_react_agent`** — LangGraph ships a one-line shortcut that would produce a working tool-calling agent immediately. Deliberately not used here: it hides exactly the mechanism (state, reducer, conditional routing) this lesson exists to teach. Revisited later (Lesson 8) as a legitimate production option once the underlying mechanics are understood, not a black box.
+- **Tool opens its own `AsyncSession` per call** rather than accepting an injected session — simplest thing that works for a single-tool crash course. Tradeoff flagged: the tool doesn't share a transaction with the rest of the `/chat` request. At production scale with several DB-backed tools per turn, this would more likely move to a shared session injected via context, to avoid connection-pool churn and to keep multiple tool calls in one turn transactionally consistent.
+- **`.where()` / `.ilike()` for the tool's query, never an f-string** — tool arguments come from the LLM, which functionally means they should be treated as untrusted input, same as HTTP request params. SQLAlchemy's query-builder methods parameterize values automatically; string-concatenating LLM-supplied values into raw SQL would be a real SQL-injection surface.
+- **`.limit(5)` inside `search_sailings`** — a tool that can return an unbounded result set is a production failure mode in its own right (blown context window, runaway token cost), independent of the summarization discussion above.
+- **Commit the user's message to Postgres *before* invoking the graph, not after** — so the user's message is durable even if the (possibly slow, possibly failing) LLM call times out or errors downstream.
+- **`_ensure_thread` helper in the route** — creates the `conversation_threads` row on first use of a new `thread_id`, before inserting into `messages`. Without it, a genuinely new thread hits a foreign-key violation immediately, since `messages.thread_id` references `conversation_threads.thread_id`.
+- **Compiled the graph with no checkpointer, and the route sends only the new `HumanMessage`** — both deliberate, matching the lesson's point: this combination is what makes the forgetting behavior visible and provable, rather than something to avoid yet.
+
+### Bugs hit and fixes
+None this lesson — `tools.py`, `graph.py`, and `routes_chat.py` were empty (0 bytes) going in, with some stale `.pyc` bytecode left over in `__pycache__` from before they were emptied. Noted, not investigated further (no functional impact — bytecode cache regenerates from whatever source is currently on disk).
+
+### Commands used
+No new `uv add` — every package this lesson needs (`langchain-openai`, `langgraph`, `langchain` core for `@tool`) was already installed in Lesson 1.
+
+Manual test of the two Done-When checks, same `thread_id`, run twice:
+```bash
+curl -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": 1, "thread_id": "thread_1_test", "message": "Are there any sailings on the Ocean Voyager?"}'
+
+curl -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": 1, "thread_id": "thread_1_test", "message": "What was the fare on that one again?"}'
+```
+
+### Self-check / confirmation results
+- 3.4 confirmed via a live view of the `messages` table (pgAdmin/DB client) — each `POST /chat` call produced one `user` row and one `assistant` row, correctly tied to `thread_1_test`.
+- 3.5 confirmed in the same data: "Are there any sailings on the Ocean Voyager?" → correct "no sailings" answer; immediately followed by "What was the fare on that one again?" → "Could you please specify which cruise or sailing you're referring to?" — clean proof the agent had zero memory of the first exchange.
+- 3.6 explain-back: root cause identified as "nothing about the previous turn is present in the input to the second call" — correctly named both valid remedies (a checkpointer auto-reinjecting prior state, *or* manually re-assembling and passing full history yourself), and correctly recognized these aren't independent bugs stacked together, they're two sides of one mechanism, with Lesson 4 wiring in the first and Lesson 5 wiring in the second.
+- Follow-up concept (checkpoint count for 40 exchanges, and whether turn 41 "contains" all 40 checkpoints) worked through using the video-game-save-file analogy above — resolved cleanly on the second pass after dialing back from a denser, more academic explanation style to a plainer, mentor-style one. That plain, one-idea-at-a-time, short-sentence explanation style is now the standing default for this course (recorded in `claude/teaching-preferences.md`).

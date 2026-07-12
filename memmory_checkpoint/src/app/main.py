@@ -71,7 +71,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     await engine.dispose()
 
 
+from app.api.routes_chat import router as chat_router
+
 app = FastAPI(title="Cruise Crash Course", lifespan=lifespan)
+
+app.include_router(chat_router)
 
 
 @app.get("/health")
