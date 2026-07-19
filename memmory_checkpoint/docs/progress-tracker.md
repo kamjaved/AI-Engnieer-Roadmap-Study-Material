@@ -62,25 +62,44 @@ See `docs/lesson-notes.md` for the full writeup of concepts, decisions, and bugs
 
 ---
 
-## Lesson 5 — Manual Summarization From Scratch — 🔄 IN PROGRESS
+## Lesson 5 — Manual Summarization From Scratch — ✅ COMPLETE (5.8–5.10 deliberately skipped)
 
 *(Flagship lesson of the course, per the roadmap — build this by hand before Lesson 6's LangMem shortcut.)*
 
-- [ ] 5.1 `memory/manual_summarizer.py` written — `maybe_summarize(db, thread_id)`: if more than 10 messages exist since the last summary's `covered_until_message_id` (or since thread start if no summary exists yet), summarize all but the most recent 6 messages in one LLM call, persist a new row to `summaries` (`thread_id`, `summary_text`, `covered_until_message_id`, `strategy='manual'`)
-- [ ] 5.2 `get_context_for_turn(db, thread_id, current_message)` written — returns a system message (base prompt + latest summary text if one exists) + the most recent 6 raw messages from `messages` + the current user message as a `HumanMessage`
-- [ ] 5.3 `api/routes_chat.py` wired: `maybe_summarize()` called *before* `get_context_for_turn()` on every `POST /chat`, and the graph's input `messages` becomes the assembled context list — not just the single new `HumanMessage` like Lessons 3–4
-- [ ] 5.4 `GET /debug/threads/{thread_id}/summary` added — returns the latest summary row, raw message count since it, and whether summarization would trigger on the next turn
-- [ ] 5.5 Done-When check #1: a 12+ message conversation confirms a `summaries` row was created after message 11
-- [ ] 5.6 Done-When check #2: the debug endpoint shows the correct `covered_until_message_id`
-- [ ] 5.7 Done-When check #3: asking about something from early in the conversation gets answered correctly using the injected summary, not the now-excluded raw early messages
-- [ ] 5.8 Concept explain-back: why `covered_until_message_id` exists — the ordering guarantee that stops re-summarizing the same messages every turn (wasted LLM calls, drifting summaries) or double-counting
-- [ ] 5.9 Concept explain-back: why `maybe_summarize()` must run *before* `get_context_for_turn()`, never after
-- [ ] 5.10 Concept explain-back: why the checkpointer's own state (Lesson 4) and this manually-assembled context can silently diverge if you're not deliberate about which one feeds the graph — and the two ways to reconcile them (feed the graph only the trimmed context built here, vs. actively pruning checkpointed `messages` with `RemoveMessage`, which is what Lesson 6's LangMem node does)
+*Kamran explicitly chose to skip the three concept explain-backs (5.8–5.10) and close the lesson on implementation + Done-When checks alone — a deliberate call, confirmed via direct question, not an inferred completion. Flagging clearly here since these three specifically test understanding of mechanisms (`covered_until_message_id`'s ordering guarantee, why `maybe_summarize()` must run before `get_context_for_turn()`, checkpoint-vs-manual-context divergence) that Lesson 6 builds directly on top of.*
 
-See `docs/lesson-notes.md` for the full writeup once this lesson is confirmed done.
+- [x] 5.1 `memory/manual_summarizer.py` written — `maybe_summarize(db, thread_id)`: if more than 10 messages exist since the last summary's `covered_until_message_id` (or since thread start if no summary exists yet), summarize all but the most recent 6 messages in one LLM call (rolling/updating the previous summary text, not just the new slice in isolation), persist a new row to `summaries` (`thread_id`, `summary_text`, `covered_until_message_id`, `strategy='manual'`)
+- [x] 5.2 `get_context_for_turn(db, thread_id, current_message)` written — returns a system message (base prompt + latest summary text if one exists) + the most recent `KEEP_RAW_COUNT` raw messages from `messages` (excluding `current_message` itself, via an `id <` boundary) + the current user message as a `HumanMessage`
+- [x] 5.3 `api/routes_chat.py` wired: `maybe_summarize()` called *before* `get_context_for_turn()` on every `POST /chat`, and the graph's input `messages` becomes the assembled context list — not just the single new `HumanMessage` like Lessons 3–4. Also fixed a discovered checkpointer-accumulation bug along the way: `graph.ainvoke()`'s `thread_id` is now scoped per-turn (`f"{thread_id}:{uuid.uuid4()}"`), not the app's stable `thread_id`, since `add_messages` only ever appends — reusing the stable id would have caused the checkpointer to re-accumulate full history on top of the manually-assembled context every turn, silently defeating summarization. Cross-turn memory is now Postgres's job exclusively (`messages`/`summaries`); the checkpointer is scoped back to its Lesson 2 role of single-turn execution-state recovery only. Side effect: `GET /debug/threads/{thread_id}/checkpoint` (Lesson 4) will now always show blank state for the stable `thread_id`, since nothing is ever checkpointed under that exact key anymore — expected, not a bug.
+- [x] 5.4 `GET /debug/threads/{thread_id}/summary` added — returns the latest summary row, raw message count since it, and whether summarization would trigger on the next turn (reuses `SUMMARIZE_TRIGGER_COUNT` imported from `manual_summarizer.py`, not a re-typed copy)
+- [x] 5.5 Done-When check #1 — verified live against `thread_summary_test`: trigger fired on the 4th exchange (7th raw message, id 46), `summaries` row created with `covered_until_message_id=43` — matches hand-traced expected math for `SUMMARIZE_TRIGGER_COUNT=6`/`KEEP_RAW_COUNT=3` exactly
+- [x] 5.6 Done-When check #2: confirmed by the same test — `/debug/threads/{thread_id}/summary` reported `covered_until_message_id: 43` and `raw_message_count_since_summary: 6`, both matching the DB exactly
+- [x] 5.7 Done-When check #3: verified live on `thread_summary_test` — "what was the very first thing I told you I wanted?" was answered correctly using only summarized content (message 42, no longer in raw context). Also caught and fixed a real bug along the way: when `maybe_summarize()` triggers on the SAME turn as the current message, its "keep raw" boundary was computed over a window including that current message, while `get_context_for_turn()`'s raw window excludes it (added separately) — causing a 1-message overlap where the boundary message got sent to the LLM both compressed (in the summary) and raw. Confirmed live (message 47 appeared in both). Fixed by excluding the current message from `maybe_summarize()`'s window before computing `to_summarize`, so both functions agree on the same boundary.
+- [~] 5.8 SKIPPED (deliberate) — Concept explain-back: why `covered_until_message_id` exists — the ordering guarantee that stops re-summarizing the same messages every turn (wasted LLM calls, drifting summaries) or double-counting
+- [~] 5.9 SKIPPED (deliberate) — Concept explain-back: why `maybe_summarize()` must run *before* `get_context_for_turn()`, never after
+- [~] 5.10 SKIPPED (deliberate) — Concept explain-back: why the checkpointer's own state (Lesson 4) and this manually-assembled context can silently diverge if you're not deliberate about which one feeds the graph — and the two ways to reconcile them (feed the graph only the trimmed context built here, vs. actively pruning checkpointed `messages` with `RemoveMessage`, which is what Lesson 6's LangMem node does)
+
+See `docs/lesson-notes.md` for the full writeup — added below.
 
 ---
 
-## Lessons 6–8 — not yet detailed
+## Lesson 6 — Framework-Native Summarization with LangMem — 🔄 NOT YET STARTED
 
-Will be broken into per-file checklists (same granularity as Lesson 1, 3, 4, and 5) as we actually reach each one. Deliberately not pre-planning these in detail now — the file list may shift slightly as earlier lessons surface things (the way Lesson 1 grew a 1.8b we didn't originally plan for), and a stale forward-looking checklist is worse than none.
+*Note: the original 5.10 item text (inherited from the uploaded tracker) incorrectly described LangMem's `SummarizationNode` as using `RemoveMessage` to prune checkpointed messages. Corrected before this checklist was written: `SummarizationNode` writes its trimmed view to a separate `output_messages_key`, leaving `state["messages"]` untouched. `RemoveMessage(REMOVE_ALL_MESSAGES)` is actually the mechanism behind LangChain's separate `SummarizationMiddleware` (built into core `langchain` 1.0's `create_agent`) — a fourth option, deferred to Lesson 8, not part of Lesson 6.*
+
+- [ ] 6.1 `memory/langmem_summarizer.py` written — `summarize_with_langmem_function(...)`: Variant A, function-style. Calls `langmem.short_term.summarize_messages(messages, running_summary=..., model=summarizer_model, max_tokens_before_summary=3000, max_summary_tokens=512, token_counter=count_tokens_approximately)`, persists the returned `running_summary` to `summaries` with `strategy='langmem'`.
+- [ ] 6.2 A helper to reconstruct LangMem's `RunningSummary` object from what's actually in your `summaries` table. Flagged as a real schema/API mismatch to design around, not copy-paste: LangMem's `RunningSummary` dataclass wants `summary`, `summarized_message_ids` (a `set[str]`), and `last_summarized_message_id` — your table only stores `covered_until_message_id`.
+- [ ] 6.3 `agent/graph.py` extended — Variant B: `langmem.short_term.SummarizationNode` added as a node before the agent node (`output_messages_key="llm_input_messages"`, `max_tokens=3000`, `max_summary_tokens=512`); `agent_node` updated to read `state["llm_input_messages"]` when present, `state["messages"]` stays the full untouched checkpointed history.
+- [ ] 6.4 `api/routes_chat.py` wired — `POST /chat` dispatches on `conversation_threads.summary_mode` (`'manual' | 'langmem_function' | 'langmem_node'`) to the matching implementation, same endpoint, three strategies.
+- [ ] 6.5 `GET /debug/threads/{thread_id}/summary` extended (not replaced) — now also reports which `summary_mode` is active.
+- [ ] 6.6 Done-When check #1: switch one thread across all three `summary_mode` values, confirm correct summarization behavior in each.
+- [ ] 6.7 Done-When check #2: prove `state["messages"]` stays genuinely untouched in `langmem_node` mode — direct empirical test of the correction above.
+- [ ] 6.8 Concept explain-back: `summarize_messages` (function-style) vs. `SummarizationNode` (graph-node style) — what's mechanically different, not just "one's a function."
+- [ ] 6.9 Concept explain-back: why neither LangMem variant replaces `messages` as the durable transcript — same principle as your manual version, different implementation.
+- [ ] 6.10 Concept explain-back: the corrected version of the checkpoint-divergence question — separate output key vs. per-turn checkpoint scoping, and where `RemoveMessage`/`SummarizationMiddleware` actually fits (a fourth option, covered properly in Lesson 8, not Lesson 6).
+
+---
+
+## Lessons 7–8 — not yet detailed
+
+Will be broken into per-file checklists (same granularity as Lesson 1, 3, 4, 5, and 6) as we actually reach each one. Deliberately not pre-planning these in detail now — the file list may shift slightly as earlier lessons surface things (the way Lesson 1 grew a 1.8b we didn't originally plan for), and a stale forward-looking checklist is worse than none.

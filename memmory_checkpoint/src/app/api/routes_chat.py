@@ -1,12 +1,14 @@
+import uuid
+from datetime import datetime
+
 from fastapi import APIRouter, Depends
-from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent.graph import graph
 from app.db.models import ConversationThread, Message
 from app.db.session import get_db_session
+from app.memory.manual_summarizer import get_context_for_turn, get_debug_context, maybe_summarize
 
 router = APIRouter()
 
@@ -17,9 +19,30 @@ class ChatRequest(BaseModel):
     message: str
 
 
+class DebugContext(BaseModel):
+    """Captures the exact context sent to the LLM for debugging."""
+
+    timestamp: datetime
+    thread_id: str
+    current_message_id: int
+
+    # Summary info (if exists)
+    summary: dict | None  # {summary_text, covered_until_message_id, strategy, created_at}
+
+    # Raw message window (KEEP_RAW_COUNT newest before current turn)
+    raw_window: list[dict]  # [{id, role, content, created_at}, ...]
+
+    # Final assembled context sent to LLM
+    final_context: list[dict]  # [{type, content}, ...]
+
+    # Metadata for debugging
+    metadata: dict  # {system_prompt_length, total_tokens_estimate, raw_window_count}
+
+
 class ChatResponse(BaseModel):
     thread_id: str
     answer: str
+    debug: DebugContext | None = None
 
 
 async def _ensure_thread(db: AsyncSession, thread_id: str, user_id: int) -> None:
@@ -33,23 +56,34 @@ async def _ensure_thread(db: AsyncSession, thread_id: str, user_id: int) -> None
         await db.flush()  # so the FK below sees this row without a full commit yet
 
 
-async def _save_message(db: AsyncSession, thread_id: str, role: str, content: str) -> None:
-    db.add(Message(thread_id=thread_id, role=role, content=content))
+async def _save_message(db: AsyncSession, thread_id: str, role: str, content: str) -> Message:
+    # get_context_for_turn() needs current_message.id — and .id only gets
+    # populated by the database after a flush (autoincrement PK), not at
+    # the moment db.add() is called.
+    message = Message(thread_id=thread_id, role=role, content=content)
+    db.add(message)
+    await db.flush()  # sends the INSERT, populates message.id — doesn't commit yet
+    return message
 
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest, db: AsyncSession = Depends(get_db_session)) -> ChatResponse:
     await _ensure_thread(db, req.thread_id, req.user_id)
-    await _save_message(db, req.thread_id, role="user", content=req.message)
-    await db.commit()  # commit BEFORE the (possibly slow) LLM call, not after —
-    # so the user's message is durable even if the graph call fails or times out downstream.
+    current_message = await _save_message(db, req.thread_id, role="user", content=req.message)
+    await db.commit()
+
+    await maybe_summarize(db, req.thread_id)
+    context = await get_context_for_turn(db, req.thread_id, current_message)
+
+    # Collect debug info: summary, raw window, final context
+    debug_info = await get_debug_context(db, req.thread_id, current_message, context)
 
     result = await graph.ainvoke(
-        {"messages": [HumanMessage(content=req.message)]},
-        config={"configurable": {"thread_id": req.thread_id}},
+        {"messages": context},
+        config={"configurable": {"thread_id": f"{req.thread_id}:{uuid.uuid4()}"}},
     )
     reply = result["messages"][-1]
     await _save_message(db, req.thread_id, role="assistant", content=reply.content)
     await db.commit()
 
-    return ChatResponse(thread_id=req.thread_id, answer=reply.content)
+    return ChatResponse(thread_id=req.thread_id, answer=reply.content, debug=debug_info)
