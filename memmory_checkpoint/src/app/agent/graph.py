@@ -1,10 +1,12 @@
 from typing import Annotated
 
 from langchain_core.messages import AnyMessage
+from langchain_core.messages.utils import count_tokens_approximately
 from langchain_openai import ChatOpenAI
 from langgraph.graph import START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode, tools_condition
+from langmem.short_term import RunningSummary, SummarizationNode
 from typing_extensions import TypedDict
 
 from app.agent.tools import search_sailings
@@ -21,7 +23,12 @@ settings = get_settings()
 # annotation, returning messages from a node would silently overwrite the
 # whole conversation state instead of adding to it.
 class AgentState(TypedDict):
+    # user messages
     messages: Annotated[list[AnyMessage], add_messages]
+    # trimmed view SummarizationNode writes, agent_node reads
+    llm_input_messages: list[AnyMessage]
+    # SummarizationNode's own bookkeeping slot — we never touch this directly
+    context: dict[str, RunningSummary]
 
 
 TOOLS = [search_sailings]
@@ -31,35 +38,35 @@ TOOLS = [search_sailings]
 # never executes anything; it just returns structured intent.
 model = ChatOpenAI(model="gpt-4o-mini", api_key=settings.openai_api_key).bind_tools(TOOLS)
 
+_summarizer_model = ChatOpenAI(model="gpt-4.1-mini", temperature=0)
+
+summarization_node = SummarizationNode(
+    model=_summarizer_model,
+    max_tokens=3000,
+    max_summary_tokens=512,
+    token_counter=count_tokens_approximately,
+    output_messages_key="llm_input_messages",
+)
+
 
 async def agent_node(state: AgentState) -> dict:
-    """The one node that talks to the LLM. Reads the full messages list,
-    returns a dict with a NEW list under 'messages' — the add_messages
-    reducer appends it, it doesn't replace state['messages'].
-    """
-    response = await model.ainvoke(state["messages"])
+    # Defensive fallback only — by construction (START -> summarize ->
+    # agent) llm_input_messages is always populated by the time this runs.
+    messages = state.get("llm_input_messages") or state["messages"]
+    response = await model.ainvoke(messages)
     return {"messages": [response]}
 
 
 builder = StateGraph(AgentState)
+builder.add_node("summarize", summarization_node)
 builder.add_node("agent", agent_node)
 builder.add_node("tools", ToolNode(TOOLS))
 
-builder.add_edge(START, "agent")
-
-# tools_condition inspects the LAST message in state["messages"]: if it has
-# tool_calls, route to the "tools" node; if not, route to END. This is the
-# conditional edge — LangGraph's equivalent of an if/else in your reducer
-# dispatch logic, except it's declared as graph structure instead of buried
-# inside a function body.
+builder.add_edge(START, "summarize")
+builder.add_edge("summarize", "agent")
 builder.add_conditional_edges("agent", tools_condition)
+# loop back through summarize, not straight to agent
+builder.add_edge("tools", "summarize")
 
-# After tools run, ALWAYS go back to the agent so the model can read the
-# tool's result and produce a real reply. This is a normal (unconditional)
-# edge — no decision needed here, it's always this direction.
-builder.add_edge("tools", "agent")
 
-# Deliberately NOT passing a checkpointer here — that's Lesson 4. Every
-# .ainvoke() call below starts from an empty `messages` list unless you
-# pass full history in yourself, which you are not doing yet either.
 graph = builder.compile(checkpointer=checkpointer)
