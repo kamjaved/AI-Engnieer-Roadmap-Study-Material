@@ -42,7 +42,7 @@ _summarizer_model = ChatOpenAI(model="gpt-4.1-mini", temperature=0)
 
 summarization_node = SummarizationNode(
     model=_summarizer_model,
-    max_tokens=3000,
+    max_tokens=1000,
     max_summary_tokens=512,
     token_counter=count_tokens_approximately,
     output_messages_key="llm_input_messages",
@@ -53,6 +53,21 @@ async def agent_node(state: AgentState) -> dict:
     # Defensive fallback only — by construction (START -> summarize ->
     # agent) llm_input_messages is always populated by the time this runs.
     messages = state.get("llm_input_messages") or state["messages"]
+
+    # --- temporary debug prints — remove once you've confirmed behavior ---
+    # running_summary = state.get("context", {}).get("running_summary")
+    # print(f"[agent_node] full history (state['messages']): {len(state['messages'])} messages")
+    # print(f"[agent_node] llm_input_messages sent to LLM:    {len(messages)} messages")
+    # print(f"[agent_node] running_summary present:           {running_summary is not None}")
+    # if running_summary is not None:
+    #     print(
+    #         f"[agent_node] running_summary.summary:           {running_summary.summary[:300]!r}"
+    #     )
+    #     print(
+    #         f"[agent_node] last_summarized_message_id:        {running_summary.last_summarized_message_id}"
+    #     )
+    # ------------------------------------------------------------------------
+
     response = await model.ainvoke(messages)
     return {"messages": [response]}
 
