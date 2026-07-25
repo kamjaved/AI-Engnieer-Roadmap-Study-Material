@@ -2,8 +2,8 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException
-from langchain_core.messages import HumanMessage
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,7 +11,18 @@ from app.agent.graph import graph
 from app.db.models import ConversationThread, Message
 from app.db.session import get_db_session
 from app.memory.langmem_summarizer import load_running_summary, summarize_with_langmem_function
-from app.memory.manual_summarizer import get_context_for_turn, get_debug_context, maybe_summarize
+from app.memory.long_term_memory import (
+    Exchange,
+    classify_and_store_background,
+    format_memories_block,
+    get_active_memories,
+)
+from app.memory.manual_summarizer import (
+    BASE_SYSTEM_PROMPT,
+    get_context_for_turn,
+    get_debug_context,
+    maybe_summarize,
+)
 
 router = APIRouter()
 
@@ -96,13 +107,20 @@ async def _save_message(db: AsyncSession, thread_id: str, role: str, content: st
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest, db: AsyncSession = Depends(get_db_session)) -> ChatResponse:
+async def chat(
+    req: ChatRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db_session),
+) -> ChatResponse:
     await _ensure_thread(db, req.thread_id, req.user_id, req.summary_mode)
     current_message = await _save_message(db, req.thread_id, role="user", content=req.message)
     await db.commit()
 
     thread = await db.get(ConversationThread, req.thread_id)
     summary_mode = thread.summary_mode
+
+    # Update 7.4 Longterm memory added active_memories
+    active_memories = await get_active_memories(db, req.user_id)
 
     # Only 'manual'/'langmem_function' assemble a context list we can
     # meaningfully debug-dump today. langmem_node's context assembly
@@ -111,14 +129,16 @@ async def chat(req: ChatRequest, db: AsyncSession = Depends(get_db_session)) -> 
 
     if summary_mode == "manual":
         await maybe_summarize(db, req.thread_id)
-        context = await get_context_for_turn(db, req.thread_id, current_message)
+        context = await get_context_for_turn(db, req.thread_id, current_message, active_memories)
         debug_info = await get_debug_context(db, req.thread_id, current_message, context)
         invoke_thread_id = f"{req.thread_id}:{uuid.uuid4()}"
         graph_input = {"messages": context}
 
     elif summary_mode == "langmem_function":
         running_summary = await load_running_summary(db, req.thread_id)
-        context = await summarize_with_langmem_function(db, req.thread_id, running_summary)
+        context = await summarize_with_langmem_function(
+            db, req.thread_id, running_summary, active_memories
+        )
         debug_info = await get_debug_context(db, req.thread_id, current_message, context)
         invoke_thread_id = f"{req.thread_id}:{uuid.uuid4()}"
         graph_input = {"messages": context}
@@ -127,7 +147,20 @@ async def chat(req: ChatRequest, db: AsyncSession = Depends(get_db_session)) -> 
         # The checkpoint IS the memory here — stable thread_id, only the
         # new message. add_messages + SummarizationNode do everything else.
         invoke_thread_id = req.thread_id
-        graph_input = {"messages": [HumanMessage(content=req.message)]}
+
+        # Update 7.4 LongTermMemory
+        snapshot = await graph.aget_state({"configurable": {"thread_id": invoke_thread_id}})
+        is_new_thread = not snapshot.values.get("messages")
+        if is_new_thread:
+            system_text = BASE_SYSTEM_PROMPT + format_memories_block(active_memories)
+            graph_input = {
+                "messages": [
+                    SystemMessage(content=system_text),
+                    HumanMessage(content=req.message),
+                ]
+            }
+        else:
+            graph_input = {"messages": [HumanMessage(content=req.message)]}
 
     else:
         raise ValueError(f"Unknown summary_mode {summary_mode!r} for thread {req.thread_id}")
@@ -140,6 +173,14 @@ async def chat(req: ChatRequest, db: AsyncSession = Depends(get_db_session)) -> 
     await _save_message(db, req.thread_id, role="assistant", content=reply.content)
     await db.commit()
 
+    # 3. right before the final `return ChatResponse(...)`, after the assistant
+    #    reply is saved and committed — schedule the classification, don't await it
+    background_tasks.add_task(
+        classify_and_store_background,
+        req.user_id,
+        req.thread_id,
+        Exchange(user_message=req.message, assistant_message=reply.content),
+    )
     return ChatResponse(thread_id=req.thread_id, answer=reply.content, debug=debug_info)
 
 

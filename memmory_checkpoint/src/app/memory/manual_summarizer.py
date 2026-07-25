@@ -8,6 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Message, Summary
+from app.memory.long_term_memory import format_memories_block
 
 # Magic numbers as named constants
 SUMMARIZE_TRIGGER_COUNT = 6
@@ -109,7 +110,7 @@ async def maybe_summarize(db: AsyncSession, thread_id: str) -> None:
 
 
 async def get_context_for_turn(
-    db: AsyncSession, thread_id: str, current_message: Message
+    db: AsyncSession, thread_id: str, current_message: Message, active_memories: list[str]
 ) -> list:
     """
     Build exactly what gets sent to the LLM this turn:
@@ -125,7 +126,8 @@ async def get_context_for_turn(
     )
 
     # Start with base system prompt, tack summary on if it exists
-    system_text = BASE_SYSTEM_PROMPT
+    # Update: Lesson 7 added active_memories in system_text
+    system_text = BASE_SYSTEM_PROMPT + format_memories_block(active_memories)
     if latest_summary:
         system_text += f"\n\nSummary of the conversation so far:\n{latest_summary.summary_text}"
 

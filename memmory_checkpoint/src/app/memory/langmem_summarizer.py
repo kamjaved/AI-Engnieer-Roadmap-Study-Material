@@ -8,7 +8,7 @@ not ours. We just call it and persist whatever it hands back.
 
 from __future__ import annotations
 
-from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
+from langchain_core.messages import AIMessage, AnyMessage, HumanMessage, SystemMessage
 from langchain_core.messages.utils import count_tokens_approximately
 from langchain_openai import ChatOpenAI
 from langmem.short_term import RunningSummary, summarize_messages
@@ -16,6 +16,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Message, Summary
+from app.memory.long_term_memory import format_memories_block
+from app.memory.manual_summarizer import BASE_SYSTEM_PROMPT
 
 # Token-budget constants, not message-count ones — this is the main
 # mechanical difference from manual_summarizer.py's SUMMARIZE_TRIGGER_COUNT.
@@ -52,6 +54,7 @@ async def summarize_with_langmem_function(
     db: AsyncSession,
     thread_id: str,
     running_summary: RunningSummary | None,
+    active_memories: list[str],
 ) -> RunningSummary | None:
     """
     Call LangMem's summarize_messages() over the FULL thread history,
@@ -99,8 +102,16 @@ async def summarize_with_langmem_function(
             )
         )
     await db.commit()
+    # UPDATE 7.4: this path had NO system message before now — result.messages is
+    # just LangMem's trimmed conversation turns, nothing about who the
+    # assistant is or what we know about this user. Rebuilt fresh every
+    # turn, same as 'manual' — so memories learned mid-thread show up
+    # immediately here, unlike langmem_node below.
+    system_message = SystemMessage(
+        content=BASE_SYSTEM_PROMPT + format_memories_block(active_memories)
+    )
 
-    return result.messages
+    return [system_message, *result.messages]
 
 
 async def load_running_summary(db: AsyncSession, thread_id: str) -> RunningSummary | None:
