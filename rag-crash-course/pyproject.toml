@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "rag-crash-course"
 version = "0.1.0"
@@ -16,6 +20,12 @@ dependencies = [
 
 [dependency-groups]
 dev = ["ruff>=0.16.0"]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 # ── Ruff configuration ─────────────────────────────────────────────────────
 [tool.ruff]

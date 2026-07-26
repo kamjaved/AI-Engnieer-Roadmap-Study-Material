@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+uv.lock.bak
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

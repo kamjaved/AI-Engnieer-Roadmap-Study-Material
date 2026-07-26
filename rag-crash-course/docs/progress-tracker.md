@@ -4,21 +4,21 @@
 
 ---
 
-## Lesson 1 — Prerequisites & Lean Project Setup — ⏳ NOT STARTED
+## Lesson 1 — Prerequisites & Lean Project Setup — ✅ COMPLETE
 
-- [ ] 1.1 Prerequisites confirmed (Python 3.13+ installed, `uv` installed, `OPENAI_API_KEY` obtained, `PINECONE_API_KEY` obtained)
-- [ ] 1.2 Project initialized (`uv init rag-crash-course --python 3.13`)
-- [ ] 1.3 Core dependencies installed via `uv add` (`langchain`, `langchain-openai`, `langchain-pinecone`, `langchain-text-splitters`, `pinecone`, `pydantic-settings`, `python-dotenv`)
-- [ ] 1.4 Dev dependency installed (`uv add --dev ruff`)
-- [ ] 1.5 Folder skeleton created — `src/rag/{ingestion,indexing,retrieval,generation,evaluation}` (each with `__init__.py`) and `data/docs/`
-- [ ] 1.6 `.env` created (`OPENAI_API_KEY`, `PINECONE_API_KEY`, `PINECONE_INDEX_NAME`, `EMBEDDING_MODEL`, `CHAT_MODEL`)
-- [ ] 1.7 `.gitignore` created (before any `git init`)
-- [ ] 1.8 `src/rag/config.py` written — pydantic-settings `BaseSettings` loading the five `.env` values, exporting a module-level `settings` instance
-- [ ] 1.9 Six seed markdown docs created under `data/docs/` (`deploy.md`, `auth.md`, `rate_limits.md`, `on_call.md`, `migrations.md`, `incident_response.md`)
-- [ ] 1.10 `DOC_METADATA` mapping stubbed in `src/rag/ingestion/loader.py` (each filename → `{"team": ..., "doc_type": ...}`)
-- [ ] 1.11 Done-When check: `uv run python -c "from rag.config import settings; print(settings.PINECONE_INDEX_NAME)"` runs with no import errors and prints the index name; all six markdown files confirmed present in `data/docs/`
+- [x] 1.1 Prerequisites confirmed (Python 3.13+ installed, `uv` installed, `OPENAI_API_KEY` obtained, `PINECONE_API_KEY` obtained)
+- [x] 1.2 Project initialized (`uv init rag-crash-course --python 3.13`)
+- [x] 1.3 Core dependencies installed via `uv add` (`langchain`, `langchain-openai`, `langchain-pinecone`, `langchain-text-splitters`, `pinecone`, `pydantic-settings`, `python-dotenv`)
+- [x] 1.4 Dev dependency installed (`uv add --dev ruff`)
+- [x] 1.5 Folder skeleton created — `src/rag/{ingestion,indexing,retrieval,generation,evaluation}` (each with `__init__.py`) and `data/docs/`
+- [x] 1.6 `.env` created (`OPENAI_API_KEY`, `PINECONE_API_KEY`, `PINECONE_INDEX_NAME`, `EMBEDDING_MODEL`, `CHAT_MODEL`)
+- [x] 1.7 `.gitignore` created (before any `git init`)
+- [x] 1.8 `src/rag/config.py` written — pydantic-settings `BaseSettings` loading the five `.env` values, exporting a module-level `settings` instance
+- [x] 1.9 Six seed markdown docs created under `data/docs/` (`deploy.md`, `auth.md`, `rate_limits.md`, `on_call.md`, `migrations.md`, `incident_response.md`)
+- [x] 1.10 `DOC_METADATA` mapping stubbed in `src/rag/ingestion/loader.py` (each filename → `{"team": ..., "doc_type": ...}`)
+- [x] 1.11 Done-When check: `uv run python -c "from rag.config import settings; print(settings.PINECONE_INDEX_NAME)"` runs with no import errors and prints the index name; all six markdown files confirmed present in `data/docs/`
 
-See `lesson-notes.md` for the full writeup of concepts, decisions, and bugs from this lesson — added once 1.1–1.11 above are confirmed complete.
+**Note (added 2026-07-26):** 1.1–1.6 were found already physically set up on disk when this session picked up the course (pyproject.toml, uv.lock, .venv, full folder skeleton, and a populated `.env` all present). Kamran explicitly confirmed these as done rather than this being inferred. Full writeup — concepts, decisions, the `uv run` vs. bare `python` bug, exact commands — is in `lesson-notes.md`.
 
 ---
 
