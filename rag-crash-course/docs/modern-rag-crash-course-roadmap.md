@@ -1,22 +1,26 @@
 # Modern RAG — Lean Crash Course
 
 > Same lineage as `langgraph-memory-crash-course-roadmap.md`, same format, different system. This is a standalone learning document — every lesson carries enough context to be pasted, on its own, into ChatGPT, Gemini, or Claude and produce correct, scoped code.
+>
+> **Updated to align with `month-02-roadmap.md`.** Every technique below now carries that roadmap's own priority label (🔴/🟡/🟢) so the mental models you build here transfer directly into Week 5–6 instead of needing to be re-learned. See §0.6 for the full mapping.
 
 ---
 
 ## 0. Summary & Objective — Read This First (Including If You're an AI Tool)
 
-**What this is.** A ~2.5–3 hour, hands-on crash course that teaches the complete mechanics behind a production-grade Retrieval-Augmented Generation pipeline — documents → chunks → embeddings → vector index → retrieval → metadata filtering → prompt augmentation → generation → evaluation → optimization — using a small internal "DevPortal" knowledge base as the vehicle. It is deliberately small so the RAG concepts stay visible and uncluttered by domain complexity, auth, UI polish, or infra you don't need to learn RAG.
+**What this is.** A ~3 hour, hands-on crash course that teaches the complete mechanics behind a production-grade Retrieval-Augmented Generation pipeline — documents → chunks → embeddings → vector index → retrieval → query transformation → reranking → prompt augmentation → generation → evaluation — using a small internal "DevPortal" knowledge base as the vehicle. It's deliberately small so the RAG concepts stay visible and uncluttered by domain complexity, auth, UI polish, or infra you don't need to learn RAG.
 
-**What you'll be able to do afterward.** Explain, from first principles and with working code you wrote yourself, why each stage of a RAG pipeline exists, what specifically breaks when you skip it, and what the beginner/production/enterprise version of that stage looks like — then defend those choices in a design review or interview.
+**What's new in this version.** This roadmap has been refined against `month-02-roadmap.md` — your Week 5–6 GenAI Engineer curriculum. Every technique below now carries that roadmap's own priority label (🔴 Essential / 🟡 Important / 🟢 Optional) and, where it applies, names which RAG architecture pattern (Naive, Advanced, Modular, Agentic, GraphRAG) it belongs to. Nothing about the philosophy changed — still lean, still hands-on, still one working app — but three genuinely load-bearing mental models that were previously missing got added: **RAG architecture patterns** (Lesson 2), **parent-child chunking** (Lesson 3, theory only), and **query transformation + hybrid retrieval awareness** (new Lesson 6.5). Adding these honestly pushed total time from ~2h55m to ~3h20m — flagged plainly rather than pretending otherwise. If you want to hold the line closer to the original estimate, Lesson 2's Modular RAG/GraphRAG aside and Lesson 3's parent-child callout are both skimmable in under a minute each without losing anything you'll be graded on in the Done-When checks.
+
+**What you'll be able to do afterward.** Explain, from first principles and with working code you wrote yourself, why each stage of a RAG pipeline exists, what specifically breaks when you skip it, and what the beginner/production/enterprise version of that stage looks like — then defend those choices in a design review or interview. You'll also be able to correctly classify what you built ("this is Naive RAG… now it's Advanced RAG") and name what's still required to push it further to Agentic — using the exact vocabulary your Month 2 roadmap uses.
 
 **Domain used.** Six short markdown docs (`deploy.md`, `auth.md`, `rate_limits.md`, `on_call.md`, `migrations.md`, `incident_response.md`) simulating an internal developer-platform knowledge base, each with lightweight metadata (`team`, `doc_type`). That's the entire corpus — deliberately thin, because the learning goal is RAG mechanics, not document management.
 
-**Explicitly out of scope for this crash course:** authentication, a database for app state, Alembic-style migrations, a frontend, CI/CD, Kubernetes, multi-tenant infra, and agentic query routing. Every lesson flags exactly what it's skipping and why, and the recap (Lesson 11) tells you what to build next once this is done.
+**Explicitly out of scope for this crash course:** authentication, a database for app state, Alembic-style migrations, a frontend, CI/CD, Kubernetes, multi-tenant infra, LangGraph orchestration, and full production observability. Every lesson flags exactly what it's skipping and why, and the recap (Lesson 11) tells you what to build next once this is done — most of it is exactly Month 2, Weeks 6–8.
 
 **How to use this document.** Work top to bottom. Each lesson is self-contained: objective, why it matters, what to build, a short illustrative code pattern (for your own mental model), and a ready-to-paste "AI Build Prompt" you can hand to a coding assistant to generate the actual implementation. Do the "Done When" check before moving on — RAG bugs are almost always silent (a wrong answer that *sounds* confident), and they compound if you don't verify each stage independently.
 
-**Total time:** ~2 hours 55 minutes. Natural split point: Lessons 1–5 (~1h20, gets you to a populated, queryable vector index) and Lessons 6–11 (~1h35, retrieval, generation, the full app, evaluation, and production hardening).
+**Total time:** ~3 hours 20 minutes. Natural split point: Lessons 1–5 (~1h30, gets you to a populated, queryable vector index) and Lessons 6–11 (~1h50, retrieval, query transformation, generation, the full app, evaluation, and production hardening).
 
 **Assumed prerequisites (per your setup):** you already have an `OPENAI_API_KEY` and a `PINECONE_API_KEY`, Python 3.13+ and `uv` installed. This course does not walk you through obtaining either key or installing base tooling.
 
@@ -33,6 +37,40 @@ Before starting, here's what was fact-checked against current PyPI releases and 
 - **On chat model naming:** OpenAI's flagship chat model name changes faster than this document can stay accurate (multiple GPT-5.x releases shipped between March and July 2026 alone). Code below uses `gpt-4.1` as a concrete, currently-valid, long-context API model so every snippet actually runs — but the generation model is the least RAG-specific part of this stack. Swap `CHAT_MODEL` in your `.env` for whatever current flagship your account has access to; nothing else in the pipeline changes.
 
 None of this affects sequencing — proceed lesson by lesson exactly as written.
+
+---
+
+## 0.6 How This Maps to Your Month 2 Roadmap
+
+This crash course is scoped to be the "why does any of this actually work" foundation underneath Month 2, Weeks 5–6. Every technique below carries the same priority label Month 2 uses, so when you get there, you're deepening something you've already built with your own hands, not meeting it cold.
+
+**Label key (identical to Month 2):** 🔴 Essential / Must Know · 🟡 Important / Good to Know · 🟢 Optional / Nice to Have
+
+| Built in this course | Month 2 concept | Label | Month 2 lesson |
+|---|---|---|---|
+| Lesson 2 | Naive RAG | 🔴 | 5.1 |
+| Lesson 2 | Advanced RAG | 🔴 | 5.1 |
+| Lesson 2 (named, not built) | Agentic RAG | 🔴 | 5.1 |
+| Lesson 2 (one-line aside) | Modular RAG | 🟡 | 5.1 |
+| Lesson 2 (one-line aside) | GraphRAG | 🟡 | 5.1 |
+| Lesson 3 | Fixed-Size Chunking | 🔴 | 5.2 |
+| Lesson 3 | Recursive Chunking (`RecursiveCharacterTextSplitter`) | 🔴 | 5.2 |
+| Lesson 3 (theory aside) | Semantic Chunking | 🟡 | 5.2 |
+| Lesson 3 (theory only, not implemented) | Parent-Child Chunking | 🔴 | 5.2 |
+| Lesson 4 | Embeddings / embedding model choice | — | prerequisite to all of Week 5 |
+| Lesson 5 | Vector store indexing | — | prerequisite to all of Week 5 |
+| Lesson 6 | Metadata Extraction / filtering | 🔴 | 5.4 |
+| Lesson 6.5 | Query Expansion | 🔴 | 6.3 |
+| Lesson 6.5 (theory + light implementation) | HyDE | 🔴 | 6.3 |
+| Lesson 6.5 (theory only, not implemented) | Dense + Sparse (BM25) + RRF hybrid search | 🔴 | 5.3 |
+| Lesson 10 | Bi-encoder vs. cross-encoder | 🔴 | 5.5 |
+| Lesson 10 (Pinecone hosted, not Cohere) | Cross-Encoder Re-ranking | 🔴 | 5.5 |
+| Lesson 9 | RAG evaluation (Ragas here; RAGAS + LLM-as-judge + golden dataset, deepened) | 🔴 | 7.x |
+| — not built here — | Corrective RAG, Adaptive RAG, Self-RAG | 🔴 / 🔴 / 🟢 | 6.3 |
+| — not built here — | LangGraph orchestration, query routing | 🔴 | 6.2, 6.4 |
+| — not built here — | Caching, observability, deployment | — | 6.5, 7.x, 8.x |
+
+**The one-sentence version of this whole table:** by the end of Lesson 10, what you've built is concretely **Advanced RAG** — Naive RAG's straight-line pipeline (Lessons 1–8) with the two defining Advanced-RAG upgrades layered on top: a **pre-retrieval** improvement (query transformation, Lesson 6.5) and a **post-retrieval** improvement (reranking, Lesson 10). Lesson 11 names this explicitly and shows exactly what's still missing to earn the label "Agentic."
 
 ---
 
@@ -90,7 +128,7 @@ rag-crash-course/
         embed_and_index.py    # Lesson 5
       retrieval/
         __init__.py
-        retriever.py          # Lesson 6
+        retriever.py          # Lesson 6, 6.5
         reranker.py           # Lesson 10
       generation/
         __init__.py
@@ -202,10 +240,23 @@ Generation
 
 The core relationship to hold in your head for the rest of this course: **retrieval quality caps generation quality — a perfect prompt cannot rescue chunks that don't contain the answer, and a sloppy prompt can waste chunks that do.** You will build and evaluate these as separable stages on purpose, because in production you diagnose and fix them separately.
 
-### 🤖 AI Build Prompt
-None — this lesson is conceptual. To sanity-check your own understanding, ask an AI tool: *"If a RAG app confidently answers a question wrong, list the distinct pipeline stages that could be the root cause, and for each, what a symptom that isolates it would look like."* The answer should distinguish at minimum: bad chunking (answer exists in the doc but got split across a boundary), bad embedding/retrieval (right chunk exists in the index but wasn't retrieved), bad augmentation (right chunk was retrieved but the prompt buried or mishandled it), and bad generation (model ignored good context and used its own prior knowledge instead).
+### 🏗️ RAG Architecture Patterns — Naming What You're About to Build
+*(Month 2 label: Naive RAG 🔴, Advanced RAG 🔴, Agentic RAG 🔴 — Lesson 5.1)*
 
-### ⏱️ ~15 minutes
+The stages above describe *a* RAG pipeline. There isn't just one shape a RAG pipeline can take, and knowing which shape you're building — and why — is itself a core skill, not trivia.
+
+**Naive RAG** — the linear pipeline you're about to build across Lessons 1–8: chunk → embed → retrieve top-k → generate, in one straight line, with no branching and no ability to look again if the first retrieval came back bad. Its known failure modes — query/document vocabulary mismatch, noisy or irrelevant retrieved context, no recovery from a bad first attempt — aren't bugs to feel bad about. They're the entire reason the next pattern exists. You build Naive RAG first specifically so these failure modes are ones you've *felt* by Lesson 9's evaluation numbers, not just read about here.
+
+**Advanced RAG** — Naive RAG plus targeted fixes at exactly two points in the pipeline: **pre-retrieval** (improving the query before it hits the vector search — query transformation, Lesson 6.5) and **post-retrieval** (improving the candidate set after retrieval, before it reaches the prompt — reranking, Lesson 10). This course gets you here by the end. Nothing about the pipeline's overall *shape* changes — it's still one straight line from question to answer — the individual stages just get smarter.
+
+**Agentic RAG** — the LLM itself decides *whether* to retrieve, *how many times*, and *with what query*, instead of retrieval being a fixed step in a fixed pipeline. It can re-search with a refined query, skip retrieval entirely for something it can answer directly, or pull from multiple sources and reconcile them. This requires a pipeline that can branch and loop — the same graph machinery from your **memory crash course** (`StateGraph`, conditional edges, cycles), applied to a retrieval decision instead of conversation state. Deliberately not built in this course (see Lesson 11's bridge) — you need Naive and Advanced solid first, or you have no way to tell whether an agentic pipeline's extra latency and complexity is actually earning its cost on a given query.
+
+*(Two more patterns are worth recognizing by name, even though this course doesn't touch them — both Month 2, Lesson 5.1, both 🟡: **Modular RAG** treats each stage — retriever, reranker, generator — as an independently swappable component, useful once a team is benchmarking and optimizing pieces separately. **GraphRAG** replaces the flat vector index with a knowledge graph, for questions about how entities *relate* to each other rather than what's topically similar — "how are these three vendors connected to our supply chain disruptions" is a GraphRAG question a vector index structurally cannot answer well, no matter how good your chunking is.)*
+
+### 🤖 AI Build Prompt
+None — this lesson is conceptual. To sanity-check your own understanding, ask an AI tool two things: (1) *"If a RAG app confidently answers a question wrong, list the distinct pipeline stages that could be the root cause, and for each, what a symptom that isolates it would look like."* A good answer distinguishes at minimum: bad chunking (answer exists in the doc but got split across a boundary), bad embedding/retrieval (right chunk exists in the index but wasn't retrieved), bad augmentation (right chunk was retrieved but the prompt buried or mishandled it), and bad generation (model ignored good context and used its own prior knowledge instead). (2) *"Why does Advanced RAG's definition specifically split into pre-retrieval and post-retrieval fixes, rather than just being 'any RAG system with more features bolted on'?"* A good answer lands on: because those are precisely the two points in the Naive RAG pipeline where a targeted, swappable fix can improve quality without changing the pipeline's linear shape — which is exactly why this course's Lesson 6.5 and Lesson 10 map onto those two exact points.
+
+### ⏱️ ~20 minutes
 
 ---
 
@@ -217,17 +268,21 @@ Load the seed docs and split them into retrievable chunks, carrying doc-level me
 ### 🧠 Why This Matters
 This is the stage most tutorials treat as boilerplate and most production incidents trace back to. A chunk is the *unit of retrievable meaning* — get the boundary wrong and you can have the answer sitting in your corpus, correctly embedded, correctly indexed, and still never surface it, because the sentence that answers the question got split from the sentence that gives it context.
 
-**Beginner approach — fixed-size character chunking.** Split every N characters, ignoring structure. Fast to implement, frequently cuts mid-sentence or mid-code-block. Fine for a demo, wrong for anything you'll evaluate.
+**Beginner approach — fixed-size character chunking** *(Month 2 label: Fixed-Size Chunking 🔴 — Lesson 5.2).* Split every N characters, ignoring structure. Fast to implement, frequently cuts mid-sentence or mid-code-block. Fine for a demo, wrong for anything you'll evaluate.
 
-**Production approach — recursive, structure-aware chunking.** `RecursiveCharacterTextSplitter` tries a list of separators in priority order (`"\n\n"`, `"\n"`, `" "`, `""`) and only falls back to a harder split when a chunk still exceeds `chunk_size`. In practice this means it splits on paragraph boundaries first, and only cuts mid-sentence as a last resort. This is the default a production team should reach for unless they've measured a reason not to.
+**Production approach — recursive, structure-aware chunking** *(Month 2 label: Recursive Chunking 🔴 — Lesson 5.2).* `RecursiveCharacterTextSplitter` tries a list of separators in priority order (`"\n\n"`, `"\n"`, `" "`, `""`) and only falls back to a harder split when a chunk still exceeds `chunk_size`. In practice this means it splits on paragraph boundaries first, and only cuts mid-sentence as a last resort. This is the default a production team should reach for unless they've measured a reason not to.
 
-**Enterprise approach — semantic / layout-aware chunking.** For heterogeneous corpora (PDFs with tables, HTML with nested sections, code with function boundaries), you chunk on document *structure* (markdown headers, HTML sections, AST nodes for code) or on *semantic similarity* (embed sentences, cut where consecutive-sentence similarity drops — "semantic chunking"). More expensive to build and run, but it's what closes the gap when recursive character chunking still produces chunks that mix unrelated topics.
+**Enterprise approach — semantic / layout-aware chunking** *(Month 2 label: Semantic Chunking 🟡 — Lesson 5.2).* For heterogeneous corpora (PDFs with tables, HTML with nested sections, code with function boundaries), you chunk on document *structure* (markdown headers, HTML sections, AST nodes for code) or on *semantic similarity* (embed sentences, cut where consecutive-sentence similarity drops — "semantic chunking"). More expensive to build and run, but it's what closes the gap when recursive character chunking still produces chunks that mix unrelated topics.
 
 **Chunk size and overlap — the actual tradeoff, not a magic number:**
 - **Too small** (e.g. 100 tokens): each chunk is precise but loses surrounding context — you retrieve a sentence fragment that answers "what" but not "why" or "when," and the LLM has nothing to reason with.
 - **Too large** (e.g. 2000+ tokens): retrieval gets *less* precise, because a chunk mixing three topics has a diluted embedding that matches all three queries weakly instead of one query strongly — and you burn prompt tokens on irrelevant text.
 - **Overlap** (commonly 10–20% of chunk size) prevents losing a sentence that straddles a boundary, at the cost of duplicate content inflating your index size and, at query time, sometimes retrieving near-duplicate chunks that don't add information.
 - Common mistake: picking chunk size once, never revisiting it. Chunk size is a hyperparameter you tune against Lesson 9's evaluation numbers, not a constant you set on day one and forget.
+
+**A fourth approach worth naming even though this course doesn't implement it — parent-child chunking** *(Month 2 label: Parent-Child Chunking 🔴 — Lesson 5.2).* It attacks the chunk-size tradeoff from a different angle than "pick one size and live with it." Instead of embedding and retrieving the same chunk, you embed small, precise **child** chunks (e.g. 150–200 tokens — great for matching a specific question tightly) but store a pointer from each child to a larger **parent** chunk (e.g. 800–1000 tokens). When a child chunk wins the similarity search, you don't hand the LLM that small child — you fetch and hand it the parent, giving the model full surrounding context for an answer that was *found* with maximum precision.
+
+Why this course doesn't implement it: parent-child retrieval needs a second storage layer — a docstore mapping child IDs to parent text, separate from the vector index — plus retrieval logic that does the child→parent lookup after the vector search returns. That's real, justified production infrastructure, not busywork, but it's disproportionate to a six-document corpus where a single recursively-split chunk already contains full context on its own. Reach for parent-child chunking when your production documents are long enough that a chunk sized right for retrieval precision (small) stops being large enough for generation context (needs to be bigger) — Month 2, Lesson 5.2 builds this for real, alongside hierarchical chunking (document > section > paragraph, 🟡) for corpora with strong structural hierarchy like legal or technical manuals.
 
 ### 🛠️ What To Build
 - `ingestion/loader.py` — reads every `.md` under `data/docs/`, attaches `team`/`doc_type` metadata per file, returns a list of LangChain `Document` objects (`page_content` + `metadata`).
@@ -276,16 +331,18 @@ plain-text chunks.
 Running the preview script shows a reasonable chunk count (roughly 2–4 chunks per seed doc at this size) and every printed chunk's metadata includes `source`, `team`, `doc_type`, and `chunk_id` — confirm by eye that no chunk's `page_content` cuts off mid-sentence in a way that would lose meaning.
 
 ### 🔑 Concepts You Must Be Able to Explain
-Why chunk size is a tradeoff and not a constant. Why metadata has to be attached before splitting, not after. What "recursive" means in `RecursiveCharacterTextSplitter` — it's not recursion over documents, it's a priority-ordered fallback through separators.
+Why chunk size is a tradeoff and not a constant. Why metadata has to be attached before splitting, not after. What "recursive" means in `RecursiveCharacterTextSplitter` — it's not recursion over documents, it's a priority-ordered fallback through separators. In one sentence, what problem parent-child chunking solves that recursive chunking alone cannot.
 
 ### ⏭️ Deferred (Production Extension)
-Semantic/embedding-based chunk-boundary detection, layout-aware chunking for PDFs/HTML with tables, and chunk-size auto-tuning against eval metrics (Lesson 9 gives you the harness; wiring an automated sweep is a natural next step once this course ends).
+Semantic/embedding-based chunk-boundary detection, layout-aware chunking for PDFs/HTML with tables, parent-child chunking (theory covered above), hierarchical chunking for structurally hierarchical corpora, and chunk-size auto-tuning against eval metrics (Lesson 9 gives you the harness; wiring an automated sweep is a natural next step once this course ends).
 
-### ⏱️ ~20 minutes
+### ⏱️ ~24 minutes
 
 ---
 
 ## 4. Lesson 4 — Embeddings: The Vector Space Mental Model
+
+*(Prerequisite knowledge for all of Month 2, Week 5 — not a numbered Month 2 lesson itself, since Month 2 assumes you already have this.)*
 
 ### 🎯 Objective
 Understand what an embedding actually *is* before treating `OpenAIEmbeddings()` as a black box, and generate embeddings for your chunks.
@@ -386,6 +443,8 @@ Why embedding model consistency between index-time and query-time is non-negotia
 
 ## 5. Lesson 5 — Vector Store & Indexing (the write path)
 
+*(Prerequisite knowledge for all of Month 2, Week 5.)*
+
 ### 🎯 Objective
 Create a Pinecone serverless index and upsert your embedded chunks into it — the pipeline's write path, run once (or on every doc update), separate from the read path you'll build in Lesson 6.
 
@@ -475,6 +534,8 @@ Incremental/content-hash-based indexing so unchanged chunks aren't re-embedded o
 
 ## 6. Lesson 6 — Retrieval & Metadata Filtering (the read path)
 
+*(Month 2 label: Dense Retrieval 🔴 — Lesson 5.3, the half of hybrid search this course implements. Metadata Filtering here is Month 2's Metadata Extraction 🔴, Lesson 5.4.)*
+
 ### 🎯 Objective
 Turn a natural-language question into the k most relevant chunks — with and without metadata filters — completing the "R" in RAG.
 
@@ -493,7 +554,7 @@ Pinecone lets you pass a `filter` dict alongside the vector query, evaluated *be
 
 **Production approach:** always pass an explicit filter (even an empty `{}`) so filtering is a conscious parameter of every query, not something added later under time pressure; expose `team`/`doc_type` filters as parameters your retrieval function accepts.
 
-**Enterprise approach:** filter-driven access control enforced server-side per authenticated user/tenant (never trust a client-supplied filter for security — derive it from the authenticated session), plus hybrid dense+sparse search (Lesson 10) for queries containing exact identifiers (error codes, endpoint names) that pure semantic search under-weights.
+**Enterprise approach:** filter-driven access control enforced server-side per authenticated user/tenant (never trust a client-supplied filter for security — derive it from the authenticated session), plus hybrid dense+sparse search (Lesson 6.5) for queries containing exact identifiers (error codes, endpoint names) that pure semantic search under-weights.
 
 ### 🛠️ What To Build
 `retrieval/retriever.py` — a function that takes a query string, an optional metadata filter dict, and `k`, and returns scored chunks.
@@ -550,13 +611,94 @@ The demo script shows the unfiltered query returning the deploy-runbook chunk as
 Why metadata filtering happens at the vector-search layer instead of as a post-hoc Python `if` on results. Why a raw cosine similarity score is not a calibrated confidence value. The two-stage "wide retrieval, then narrow" pattern and why it's different from just picking a smaller `k`.
 
 ### ⏭️ Deferred (Production Extension)
-Server-side, session-derived filters for access control (this lesson's filters are caller-supplied, which is fine for a single-user demo and unsafe for a multi-tenant app); hybrid dense+sparse retrieval; query rewriting before embedding (both in Lesson 10).
+Server-side, session-derived filters for access control (this lesson's filters are caller-supplied, which is fine for a single-user demo and unsafe for a multi-tenant app); hybrid dense+sparse retrieval; query rewriting before embedding (both in Lesson 6.5).
 
-### ⏱️ ~15 minutes
+Retrieval as built here is still single-shot and dense-only. Lesson 6.5, immediately next, adds the two upgrades that start turning this from Naive RAG into Advanced RAG.
+
+### ⏱️ ~16 minutes
+
+---
+
+## 6.5. Lesson 6.5 — Query Transformation & Hybrid Retrieval Awareness
+
+### 🎯 Objective
+Improve what goes *into* retrieval (query transformation) and understand the retrieval-architecture upgrade most production teams reach for next (hybrid search) — the two moves that, together with Lesson 10's reranking, turn Naive RAG into Advanced RAG.
+
+### 🧠 Why This Matters
+Lesson 2 defined Advanced RAG as Naive RAG plus fixes at exactly two points: **pre-retrieval** and **post-retrieval**. This lesson is the pre-retrieval half. Lesson 10 is the post-retrieval half. Both exist because the same underlying problem shows up from two different directions: a user's terse, informally-worded question and a well-written document chunk don't share as much vocabulary as you'd hope, even when the chunk perfectly answers the question.
+
+**Query Expansion** *(Month 2 label: 🔴 — Lesson 6.3).* Generate 3–5 reformulations of the original query — different phrasings, different levels of specificity — search with all of them, and deduplicate the combined results before they reach the prompt. It directly attacks the vocabulary-gap problem by giving the retriever several different chances to match the document's actual wording, at the cost of extra embedding calls and retrieval round-trips. This course names the technique and explains the mechanism but doesn't implement it — the DevPortal corpus is small enough that single-query retrieval already performs well, and the real payoff of query expansion only shows up on larger, more heterogeneous corpora where a single phrasing genuinely misses relevant material. Month 2, Lesson 6.3 builds it for real.
+
+**HyDE — Hypothetical Document Embeddings** *(Month 2 label: 🔴 — Lesson 6.3).* Instead of embedding the user's raw question, ask the LLM to first draft a plausible, made-up *answer* to it — with no retrieval involved yet — then embed *that hypothetical answer* and use it as the search query. This sounds backwards until you see why it works: your indexed chunks are written in "document language" (declarative, detailed, answer-shaped), while a user's question is written in "question language" (short, interrogative, vague). A hypothetical answer is already in document language, even though it might be factually wrong — and it's the *style and vocabulary* match that improves retrieval, not the hypothetical's correctness. HyDE is cheap enough (one extra LLM call before embedding) that this course implements it as an optional mode on `retrieve()` below.
+
+**Hybrid Retrieval — dense + sparse (BM25) + Reciprocal Rank Fusion** *(Month 2 label: 🔴 — Lesson 5.3).* Dense (embedding) search is strong on paraphrase and synonym matching but weak on exact tokens — a chunk containing the literal string `RATE_LIMIT_EXCEEDED` or a ticket ID doesn't necessarily embed "close" to a query containing that same string, because embeddings capture meaning, not exact characters. **Sparse retrieval** (BM25 — term-frequency-weighted exact lexical matching, no embeddings involved) is the mirror image: it excels at exactly what dense search misses — error codes, product codes, proper nouns, domain jargon. Running both and merging the two ranked lists with **Reciprocal Rank Fusion** — `score = Σ 1 / (k + rank_i)`, with `k = 60` as the standard starting constant — gives you a single fused ranking that rewards a chunk for ranking well in *either* list, with no manually-tuned weights required to get a reasonable result. This course explains the mechanism and its expected gain (typically 5–15% recall improvement over dense alone, per Month 2's own figures) but doesn't implement it: hybrid search is an *index-level* decision, not a pure application-code addition like HyDE is — it needs a second sparse index (or a Pinecone index built with `metric="dotproduct"` supporting both `values` and `sparse_values`) reconfigured from the cosine-metric index Lesson 5 already built, plus a BM25 encoder library. Real, worthwhile infrastructure — genuinely disproportionate to a six-document corpus with no exact-match-sensitive content. Month 2, Lesson 5.3 builds it for real.
+
+### 🛠️ What To Build
+Add a `hyde_query()` function and wire it into `retrieve()` as an optional `query_transform` parameter (defaulting to `"none"`, so nothing built in Lessons 7–8 has to change).
+
+### 💡 Core Pattern
+```python
+# The point of this snippet: the hypothetical answer never gets shown
+# to the user and is never checked for correctness — it exists purely
+# to be embedded. A confidently WRONG hypothetical answer can still
+# improve retrieval, because what's being matched is vocabulary and
+# style, not the hypothetical's factual content.
+from langchain_openai import ChatOpenAI
+
+from rag.config import settings
+
+_hyde_llm = ChatOpenAI(model=settings.CHAT_MODEL, temperature=0.3)
+
+def hyde_query(question: str) -> str:
+    response = _hyde_llm.invoke(
+        f"Write a short, plausible-sounding paragraph that WOULD answer "
+        f"this question, as if it came from an internal developer-platform "
+        f"doc. It's fine if it's not fully accurate — write in the style "
+        f"of the docs, not as a hedge-everything answer.\n\nQuestion: {question}"
+    )
+    return response.content
+```
+
+Update `retrieve()` from Lesson 6 to accept `query_transform: str = "none"`, call `hyde_query(query)` and embed the result instead of the raw question when `query_transform == "hyde"`.
+
+### 🤖 AI Build Prompt
+```text
+Using langchain-openai, extend the existing src/rag/retrieval/retriever.py
+from Lesson 6:
+1. Add hyde_query(question: str) -> str exactly as shown above, using
+   ChatOpenAI(model=settings.CHAT_MODEL, temperature=0.3).
+2. Add a query_transform: str = "none" parameter to retrieve(). When
+   query_transform == "hyde", call hyde_query(query) first and use
+   ITS output as the text passed to similarity_search_with_score,
+   instead of the raw query string. When "none" (the default),
+   behavior is identical to Lesson 6 — do not change the default
+   behavior of any existing caller.
+3. A __main__ demo (src/rag/run_hyde_demo.py) that runs ONE short,
+   vague question (something like "what do I do if things break at
+   3am?") through retrieve() twice — once with query_transform="none",
+   once with "hyde" — and prints both result sets' top chunk and score
+   side by side so the difference is visible.
+
+Do not modify answer_question() or the FastAPI routes from Lessons 7-8
+— query_transform stays an opt-in parameter with a safe default.
+```
+
+### ✅ Done When
+The demo script shows a visible difference between the two runs on the deliberately vague question — either a different top chunk, or the same chunk with a meaningfully different score — proving `hyde_query()` is actually changing what gets embedded and searched, not just adding an unused code path.
+
+### 🔑 Concepts You Must Be Able to Explain
+Why HyDE's hypothetical answer improves retrieval *despite* possibly being factually wrong — the mechanism is vocabulary/style matching, not correctness. Why RRF needs no tuned weights to be a reasonable default (it rewards agreement across ranked lists, not any one list's absolute scores). Why hybrid retrieval is an index-level decision (metric, sparse vectors) while reranking (Lesson 10) and HyDE (this lesson) are both pure application-code additions that don't touch the index at all.
+
+### ⏭️ Deferred (Production Extension)
+Query expansion implementation (multi-query generation + deduplication); a full dense+sparse Pinecone index with a BM25 sparse encoder; step-back prompting (abstracting a specific question into a more general one before retrieving); corrective RAG (an LLM-as-judge grading step that rewrites and retries a bad retrieval — needs LangGraph's cycles, Month 2 Lesson 6.2); adaptive RAG query routing (classify query complexity first, route to the cheapest pattern that can answer it — Month 2 Lesson 6.3, the 2026 production default).
+
+### ⏱️ ~16 minutes
 
 ---
 
 ## 7. Lesson 7 — Prompt Augmentation & Generation
+
+*(Retrieval here uses Lesson 6/6.5's `retrieve()`, which now optionally accepts `query_transform` — this lesson always calls it with the default `"none"`, so nothing below changes based on that parameter existing.)*
 
 ### 🎯 Objective
 Turn retrieved chunks into a grounded answer: build the augmented prompt and wire it to the LLM as an LCEL chain.
@@ -711,8 +853,8 @@ from Lesson 7's chain.py; returns answer + sources only, not
 raw_chunks — keep the wire response lean). Instantiate the vector
 store connection ONCE at module load, not per-request. Add a GET
 /health returning {"status": "ok"}. Do not add authentication, rate
-limiting, request logging middleware, or CORS config — explicitly out
-of scope for this lesson.
+limiting, request logging middleware, CORS config, or Lesson 6.5's
+query_transform parameter — explicitly out of scope for this lesson.
 ```
 
 ### ✅ Done When
@@ -722,13 +864,15 @@ of scope for this lesson.
 Why the vector store connection is instantiated once at startup, not per-request (connection overhead, and Pinecone's client is safe to reuse across requests). Why `/ingest` as a synchronous request/response endpoint is a demo simplification — for any real corpus, ingestion is a background job (queue-triggered or scheduled), because embedding hundreds of documents inside an HTTP request timeout window doesn't scale and blocks the caller for no reason.
 
 ### ⏭️ Deferred (Production Extension)
-Auth, rate limiting, async background ingestion (Celery/RQ/a queue), request logging and tracing, streaming `/query` responses (server-sent events), CORS — all standard FastAPI production concerns, none specific to RAG, all skipped here to keep the lesson about the pipeline, not the framework.
+Auth, rate limiting, async background ingestion (Celery/RQ/a queue), request logging and tracing, streaming `/query` responses (server-sent events), CORS, exposing Lesson 6.5's `query_transform` as an API parameter — all standard FastAPI production concerns (or a deliberately deferred feature flag), none specific to RAG mechanics, all skipped here to keep the lesson about the pipeline, not the framework.
 
 ### ⏱️ ~20 minutes
 
 ---
 
 ## 9. Lesson 9 — Retrieval Evaluation
+
+*(Month 2 label: 🔴 — the RAGAS metrics here are deepened into full RAGAS + LLM-as-judge + a continuously-grown golden dataset in Lesson 7.x.)*
 
 ### 🎯 Objective
 Stop eyeballing whether answers "look right" and measure retrieval and generation quality with actual numbers, using Ragas.
@@ -835,7 +979,7 @@ CI-gated evaluation on every pipeline change; a growing, production-sourced eval
 ## 10. Lesson 10 — Common RAG Pitfalls & Optimization
 
 ### 🎯 Objective
-Name the failure modes you're now equipped to recognize, and add the two highest-leverage production upgrades: reranking and hybrid search.
+Name the failure modes you're now equipped to recognize, and add the highest-leverage remaining production upgrade: reranking — the post-retrieval half of Advanced RAG (Lesson 6.5 covered the pre-retrieval half).
 
 ### 🧠 Why This Matters
 This lesson is conceptual-heavy and code-light on purpose — most of what makes RAG "production-grade" isn't a new component, it's knowing which of the pieces you already built to tune, and in what order, when quality isn't good enough.
@@ -846,15 +990,16 @@ This lesson is conceptual-heavy and code-light on purpose — most of what makes
 |---|---|---|---|
 | **Lost in the middle** | Answer ignores a clearly-relevant chunk that WAS retrieved | LLMs attend less to context buried mid-prompt, more to the start/end | Fewer, higher-quality chunks (rerank down to k=3-5); order by relevance, most-relevant closest to the question |
 | **Chunk-boundary information loss** | Answer is partial or misses a qualifier ("...unless X") that got split into the next chunk | Chunk size/overlap too aggressive for this content | Increase overlap; use structure-aware splitting (Lesson 3) |
-| **Embedding/query length mismatch** | Short, terse queries retrieve poorly even when the answer chunk is well-written | A 5-word query and a 200-word chunk don't embed into directly comparable regions of the space as reliably as two similarly-sized texts | Query rewriting/expansion, or HyDE (below) |
+| **Embedding/query length mismatch** | Short, terse queries retrieve poorly even when the answer chunk is well-written | A 5-word query and a 200-word chunk don't embed into directly comparable regions of the space as reliably as two similarly-sized texts | Query transformation — HyDE or query expansion (Lesson 6.5) |
 | **Stale index** | Answers cite outdated info even after the source doc was updated | Ingestion wasn't re-run after the doc changed | A re-indexing trigger (webhook, schedule) — not a RAG-specific problem, a data-freshness problem |
 | **Retrieval-generation mismatch** | Confidently wrong answer despite irrelevant retrieved chunks | Weak or missing grounding instruction (Lesson 7) | Re-check the system prompt; verify with Lesson 9's faithfulness metric, not by eye |
 | **Over-restrictive metadata filter** | Zero results, or a refusal, on a question that IS answerable | Filter combination too narrow for the corpus | Loosen filters progressively; log zero-result queries |
 | **Full re-embedding on every change** | Ingestion cost/time scales with total corpus size instead of change size | No content-hash check before re-embedding | Hash each chunk's content; skip embedding+upsert for unchanged hashes |
 
 ### 🚀 Optimization: Reranking
+*(Month 2 label: Bi-encoder vs. cross-encoder 🔴, Cross-Encoder Re-ranking 🔴 — Lesson 5.5)*
 
-Retrieval and reranking solve different problems. Retrieval (Lesson 6) has to be fast enough to search millions of vectors — it uses a cheap bi-encoder (embed query and chunk separately, compare vectors). A **reranker** is a slower, more accurate cross-encoder that looks at the query and each candidate chunk *together* and scores relevance directly — too slow to run over a whole index, but cheap enough to run over the 15–25 candidates your retriever already narrowed things down to. This is the standard **two-stage retrieval** pattern: cast a wide net cheaply, then rerank down to the few chunks that actually go in the prompt.
+Retrieval and reranking solve different problems. Retrieval (Lesson 6) has to be fast enough to search millions of vectors — it uses a cheap **bi-encoder** (embed query and chunk separately, compare vectors). A **reranker** is a slower, more accurate **cross-encoder** that looks at the query and each candidate chunk *together* and scores relevance directly — too slow to run over a whole index, but cheap enough to run over the 15–25 candidates your retriever already narrowed things down to. This is the standard **two-stage retrieval** pattern: cast a wide net cheaply, then rerank down to the few chunks that actually go in the prompt.
 
 ```python
 # Pinecone's hosted reranker — no separate API key needed, same
@@ -873,19 +1018,15 @@ def rerank(pc: Pinecone, query: str, scored_docs: list[tuple], top_n: int = 5) -
     return [scored_docs[r.index] for r in result.data]
 ```
 
-Wire this between Lesson 6's `retrieve(k=20)` and Lesson 7's `format_docs` — retrieve wide, rerank narrow, generate from the narrow set.
-
-### 🚀 Optimization: Hybrid Search
-
-Pure dense (embedding) search is weak on exact matches — a chunk containing the literal string `RATE_LIMIT_EXCEEDED` or an internal ticket ID doesn't necessarily embed "close" to a query containing that same string, because embeddings capture meaning, not exact tokens. **Hybrid search** combines dense vectors with a sparse (keyword/BM25-style) representation, so exact terms get exact-match credit while the dense side still handles paraphrased questions. Pinecone supports this via sparse-dense indexes (`metric="dotproduct"`) with both `values` and `sparse_values` on each vector — worth reaching for the moment your corpus includes error codes, product names, or IDs users will paste verbatim into a query, which this course's thin DevPortal corpus deliberately doesn't need.
+Wire this between Lesson 6/6.5's `retrieve(k=20)` and Lesson 7's `format_docs` — retrieve wide, rerank narrow, generate from the narrow set. Month 2's Lesson 5.5 covers two production alternatives worth knowing by name even though this course sticks with Pinecone's hosted model to avoid a third API key: **Cohere Rerank** (`co.rerank(...)`, hosted, ~100-300ms added latency, current model `rerank-v3.5`) and self-hosted open-source cross-encoders (`cross-encoder/ms-marco-MiniLM-L-6-v2` via `sentence-transformers`) for teams that want zero per-call cost at the price of running their own inference.
 
 ### 🔑 Concepts You Must Be Able to Explain
-Why a reranker can afford to be slower and more accurate than the initial retriever — because it runs over 20 candidates, not 20 million. Why "lost in the middle" is a reason to rerank down to fewer chunks, not just a reason to write a better prompt. When hybrid search earns its complexity (exact-match-sensitive corpora) versus when it doesn't (this course's corpus).
+Why a reranker can afford to be slower and more accurate than the initial retriever — because it runs over 20 candidates, not 20 million. Why "lost in the middle" is a reason to rerank down to fewer chunks, not just a reason to write a better prompt. Why reranking (this lesson) and query transformation (Lesson 6.5) are the two things that together make a pipeline "Advanced RAG" per Lesson 2's definition — one fixes what goes in, one fixes what comes out.
 
 ### ⏭️ Deferred (Production Extension)
-Query rewriting and HyDE (Hypothetical Document Embeddings — ask an LLM to draft a hypothetical answer first, then embed *that* instead of the raw query, which often retrieves better because it's closer in style/length to what's actually indexed) — genuinely useful, deliberately cut here to keep this course's total time honest. Semantic caching of repeated queries. Full hybrid sparse-dense indexing.
+Hybrid dense+sparse search and query expansion — both covered conceptually in Lesson 6.5, deliberately not implemented there or here. Semantic caching of repeated queries. Cohere Rerank / self-hosted cross-encoders as alternatives to Pinecone's hosted reranker (Month 2, Lesson 5.5). Measuring reranking's actual MRR improvement on your own eval set before trusting it blindly, rather than assuming it always helps (Month 2's own guidance: always measure).
 
-### ⏱️ ~15 minutes
+### ⏱️ ~12 minutes
 
 ---
 
@@ -902,6 +1043,9 @@ Chunk (chunker.py)       → retrievable unit, metadata inherited
 Embedding (OpenAIEmbeddings) → chunk meaning as a vector
 Pinecone index            → ANN-searchable vector storage, dimension
                              locked to your embedding model
+hyde_query() (Lesson 6.5, optional) → rewrites a vague question into
+                             a hypothetical, document-shaped answer
+                             before it gets embedded
 retrieve() (retriever.py) → query embedding + vector search +
                              metadata filter -> scored candidate chunks
 rerank() (Lesson 10)       → cross-encoder narrows candidates
@@ -911,12 +1055,20 @@ Ragas eval                    → separates retrieval quality from
                                  generation faithfulness, numerically
 ```
 
+### 🏷️ What You Built, In Month 2's Own Terms
+
+Walking the recap above against Lesson 2's definitions: Lessons 1–8, on their own, are **Naive RAG** — a straight line from question to answer with no pre- or post-retrieval intelligence. Adding Lesson 6.5's `hyde_query()` (pre-retrieval) and Lesson 10's `rerank()` (post-retrieval) — both purely additive, neither one changed the pipeline's linear shape — is exactly what Month 2, Lesson 5.1 defines as the jump from Naive to **Advanced RAG**. That's not a stretch or a marketing label: it's the literal definition, and you can now point at the two specific functions that earned it.
+
+What would still be missing to call it **Agentic RAG**: the LLM itself would need to decide whether `hyde_query()` and `rerank()` run at all, whether to retrieve a second time with a different query if the first pass looks weak, and whether to answer some questions with no retrieval step at all. That decision-making requires a graph that can branch and loop — out of scope here, exactly the territory of Month 2, Lesson 6.2 (LangGraph stateful workflows) and Lesson 6.3 (Corrective / Adaptive RAG).
+
 ### 📊 Naive vs. Production vs. Enterprise RAG — When to Choose Which
 
 | | Naive RAG | Production RAG (this course) | Enterprise RAG |
 |---|---|---|---|
-| Chunking | Fixed character count | Recursive, structure-aware | Semantic/layout-aware, size auto-tuned against eval |
-| Retrieval | Single-stage top-k | Wide retrieval + metadata filter | + reranking + hybrid dense/sparse |
+| RAG pattern (Month 2 label) | Naive RAG 🔴 | Advanced RAG 🔴 | Agentic RAG 🔴 / GraphRAG 🟡 |
+| Chunking | Fixed character count | Recursive, structure-aware | Semantic/parent-child/layout-aware, size auto-tuned against eval |
+| Retrieval | Single-stage top-k | Wide retrieval + metadata filter + optional HyDE | + hybrid dense/sparse + query expansion |
+| Post-retrieval | None | Cross-encoder reranking | + corrective retry loop, adaptive routing |
 | Access control | None | Caller-supplied filter (demo-safe only) | Session-derived, server-enforced filter |
 | Generation | Unstructured prompt, no grounding instruction | Grounding instruction + numbered citations | + real-time faithfulness guardrail pass |
 | Evaluation | None ("looks right") | Static hand-labeled eval set, run manually | CI-gated, production-sourced, drift-monitored |
@@ -926,19 +1078,22 @@ Ragas eval                    → separates retrieval quality from
 None of the rows are "wrong" in isolation — naive RAG is the right choice for a one-off internal script, and this course deliberately stops at the "Production RAG" column because that's the version worth understanding deeply before reaching for enterprise complexity you may not need yet.
 
 ### 🌉 Bridge: What This Course Deliberately Left Out
-| Topic | Why deferred | Where to go next |
-|---|---|---|
-| Agentic RAG / query routing | Needs multiple retrievers or tools and a decision layer — that's the domain of the graph/agent frameworks, not RAG mechanics itself | LangGraph — combine this course's `retrieve()`/`answer_question()` as tools inside a graph node, and reuse your **memory crash course**'s checkpointing/summarization for multi-turn conversations grounded in this index |
-| Query rewriting / HyDE | Genuinely useful, cut here to protect the time budget | One new function ahead of `retrieve()`: LLM call to rewrite the query before embedding it |
-| Hybrid dense+sparse search | This course's corpus doesn't have exact-match-sensitive content to justify it | Pinecone sparse-dense indexes, `metric="dotproduct"` |
-| Production API concerns (auth, rate limiting, streaming, background ingestion) | Standard FastAPI concerns, not RAG-specific | Any FastAPI production guide — nothing here changes based on RAG |
-| CI-gated evaluation, production monitoring of retrieval/faithfulness drift | Needs a deployed system with real traffic to be meaningful | Wire Lesson 9's `run_eval.py` into your CI pipeline as a first step |
-| GraphRAG / knowledge-graph-augmented retrieval | A meaningfully different retrieval paradigm (graph traversal, not pure vector similarity), not a small extension | Worth a dedicated deep-dive once vector-based RAG's limits are actually the bottleneck you're hitting — don't reach for it earlier |
 
-### ⏱️ ~10 minutes
+| Topic | Month 2 label | Why deferred | Where to go next |
+|---|---|---|---|
+| Agentic RAG / query routing | 🔴 — Lesson 5.1, 6.2, 6.4 | Needs multiple retrievers or tools and a decision layer — that's the domain of the graph/agent frameworks, not RAG mechanics itself | LangGraph — combine this course's `retrieve()`/`answer_question()` as tools inside a graph node, and reuse your **memory crash course**'s checkpointing/summarization for multi-turn conversations grounded in this index |
+| Query expansion (multi-query + dedup) | 🔴 — Lesson 6.3 | Genuinely useful; explained conceptually in Lesson 6.5, cut from implementation to protect the time budget once HyDE was covered | One `RunnableParallel` branch ahead of `retrieve()`: generate 3-5 reformulations, retrieve each, deduplicate |
+| Hybrid dense+sparse search | 🔴 — Lesson 5.3 | This course's corpus doesn't have exact-match-sensitive content to justify the index-level rework; explained in full in Lesson 6.5 | Pinecone sparse-dense indexes, `metric="dotproduct"`, a BM25 sparse encoder, merged with RRF |
+| Modular RAG | 🟡 — Lesson 5.1 | Only pays off once a team is benchmarking retriever/reranker/generator swaps independently — premature for a single-corpus course | Treat each of this course's stages as a swappable interface once you have 2+ real options to A/B for any one of them |
+| GraphRAG | 🟡 — Lesson 5.1 | A meaningfully different retrieval paradigm (graph traversal, not vector similarity), not a small extension | Worth a dedicated deep-dive once relationship-style queries — not just topical ones — are a real, measured part of your query distribution |
+| Corrective / Adaptive RAG | 🔴 / 🔴 — Lesson 6.3 | Needs a graph that can loop (retrieve → grade → retry) and a query-complexity classifier upstream of retrieval — both out of scope here | Month 2, Lesson 6.2 (LangGraph cycles) then 6.3, directly building on this course's `retrieve()` and `rerank()` as the nodes being routed between |
+| Production API concerns (auth, rate limiting, streaming, background ingestion) | — | Standard FastAPI concerns, not RAG-specific | Any FastAPI production guide — nothing here changes based on RAG |
+| CI-gated evaluation, production monitoring of retrieval/faithfulness drift | 🟡 — Lesson 7.x | Needs a deployed system with real traffic to be meaningful | Wire Lesson 9's `run_eval.py` into your CI pipeline as a first step |
+
+### ⏱️ ~15 minutes
 
 ---
 
 ## Appendix — What This Crash Course Never Builds (By Design)
 
-Authentication, a persistent application database, multi-tenant namespace isolation, streaming responses, background job infrastructure, CI/CD, Kubernetes, agentic query routing, knowledge graphs, fine-tuned embedding models, and a frontend. All legitimate production concerns — none of them RAG mechanics, which is the entire scope of this course.
+Authentication, a persistent application database, multi-tenant namespace isolation, streaming responses, background job infrastructure, CI/CD, Kubernetes, agentic query routing, LangGraph orchestration, knowledge graphs, hybrid dense+sparse indexing infrastructure, fine-tuned embedding models, and a frontend. All legitimate production concerns — none of them RAG mechanics, which is the entire scope of this course.
