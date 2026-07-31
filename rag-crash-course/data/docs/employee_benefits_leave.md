@@ -1,0 +1,9 @@
+Turab Industries provides four leave categories. Casual Leave (CL): 8 days per year, for short-notice personal needs, non-encashable and lapsing at year-end. Sick Leave (SL): 10 days per year, requiring a medical certificate for absences beyond 2 consecutive days. Earned Leave (EL): accrues at 1.5 days per completed month (18 days/year), can be carried forward up to a maximum balance of 45 days, and is encashable at the time of resignation or retirement, capped at 30 days. Maternity Leave: 26 weeks paid, per the Maternity Benefit Act; Paternity Leave: 10 working days paid, to be availed within 3 months of the child's birth.
+
+All leave requests must be submitted through the HR portal at least 2 working days in advance, except sick leave, which may be applied for retroactively within 3 working days of returning to work. Unapproved absence beyond 3 consecutive days without communication is treated as job abandonment and may result in disciplinary review.
+
+Health insurance is provided to all confirmed employees and their immediate family (spouse and up to 2 children) under a group mediclaim policy with a sum insured of ₹3,00,000 per family per year, effective from the date of confirmation, not from date of joining. Probationary employees are covered under a basic accident-only policy until confirmation.
+
+Provident Fund (PF) is contributed at 12% of basic salary by both employee and employer, as per statutory requirement. Gratuity is payable after 5 years of continuous service, per the Payment of Gratuity Act. A festival bonus equivalent to one month's basic salary is paid before Diwali each year, prorated for employees with less than a full year of service.
+
+Employees receive a 40% discount on Turab Industries' own promotional merchandise and apparel lines (excluding client-branded/custom orders), capped at ₹15,000 per employee per financial year, intended for personal use rather than resale.

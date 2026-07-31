@@ -14,11 +14,13 @@
 - [x] 1.6 `.env` created (`OPENAI_API_KEY`, `PINECONE_API_KEY`, `PINECONE_INDEX_NAME`, `EMBEDDING_MODEL`, `CHAT_MODEL`)
 - [x] 1.7 `.gitignore` created (before any `git init`)
 - [x] 1.8 `src/rag/config.py` written — pydantic-settings `BaseSettings` loading the five `.env` values, exporting a module-level `settings` instance
-- [x] 1.9 Six seed markdown docs created under `data/docs/` (`deploy.md`, `auth.md`, `rate_limits.md`, `on_call.md`, `migrations.md`, `incident_response.md`)
+- [x] 1.9 Six seed markdown docs created under `data/docs/` (`hr_policies.md`, `employee_benefits_leave.md`, `travel_expense_policy.md`, `procurement_guidelines.md`, `product_catalog_faq.md`, `product_catalog_services_guide.md`)
 - [x] 1.10 `DOC_METADATA` mapping stubbed in `src/rag/ingestion/loader.py` (each filename → `{"team": ..., "doc_type": ...}`)
 - [x] 1.11 Done-When check: `uv run python -c "from rag.config import settings; print(settings.PINECONE_INDEX_NAME)"` runs with no import errors and prints the index name; all six markdown files confirmed present in `data/docs/`
 
 **Note (added 2026-07-26):** 1.1–1.6 were found already physically set up on disk when this session picked up the course (pyproject.toml, uv.lock, .venv, full folder skeleton, and a populated `.env` all present). Kamran explicitly confirmed these as done rather than this being inferred. Full writeup — concepts, decisions, the `uv run` vs. bare `python` bug, exact commands — is in `lesson-notes.md`.
+
+**Note (added 2026-07-31) — Domain pivot:** Kamran requested a full domain swap, replacing the original "DevPortal" knowledge base with a fictional company, **Turab Industries Pvt. Ltd.** (see the updated roadmap). The 1.9 and 1.10 rows above now reflect the *current* state: the original six DevPortal docs (`deploy.md`, `auth.md`, `rate_limits.md`, `on_call.md`, `migrations.md`, `incident_response.md`) have been deleted from `data/docs/` and replaced with the six Turab Industries docs listed in 1.9; `loader.py`'s `DOC_METADATA` was rewritten to match (six markdown entries now; two PDF entries — `corporate_gifts_price_list.pdf`, `company_overview.pdf` — are commented-in as a preview, to be added for real in Lesson 2.5, not before). `.env`'s `PINECONE_INDEX_NAME` should read `turab-industries` (not `devportal-kb`, and not `turab_industries` — Pinecone index names can't contain underscores) — update this yourself if you haven't yet. Lesson 1's original build (against the DevPortal domain) genuinely happened and is preserved as-is in `lesson-notes.md`, with its own supersession note added there rather than rewritten.
 
 ---
 

@@ -3,24 +3,31 @@
 > Same lineage as `langgraph-memory-crash-course-roadmap.md`, same format, different system. This is a standalone learning document — every lesson carries enough context to be pasted, on its own, into ChatGPT, Gemini, or Claude and produce correct, scoped code.
 >
 > **Updated to align with `month-02-roadmap.md`.** Every technique below now carries that roadmap's own priority label (🔴/🟡/🟢) so the mental models you build here transfer directly into Week 5–6 instead of needing to be re-learned. See §0.6 for the full mapping.
+>
+> **Revision 2 (this version).** Three changes made at Kamran's request, after Lesson 1 was already built and confirmed against the original "DevPortal" domain: (1) the entire knowledge base is now a fictional B2B corporate-apparel and gifting manufacturer, **Turab Industries Pvt. Ltd.**, instead of an internal dev platform; (2) a new **Lesson 2.5** adds Tier-1 PDF ingestion — two real PDFs, created by Kamran from Claude-generated content, loaded the same way as any other seed doc — deliberately scoped short of an upload endpoint or file validation (that's Tier 2/3, explicitly out of scope, see Lesson 2.5's own framing); (3) **Lesson 3** upgrades Parent-Child Chunking from a theory-only aside to a small, standalone, implemented comparison against Recursive Chunking. None of this changes the pipeline's shape or Lessons 4 onward's actual indexing path — see each lesson for exactly what did and didn't change.
 
 ---
 
 ## 0. Summary & Objective — Read This First (Including If You're an AI Tool)
 
-**What this is.** A ~3 hour, hands-on crash course that teaches the complete mechanics behind a production-grade Retrieval-Augmented Generation pipeline — documents → chunks → embeddings → vector index → retrieval → query transformation → reranking → prompt augmentation → generation → evaluation — using a small internal "DevPortal" knowledge base as the vehicle. It's deliberately small so the RAG concepts stay visible and uncluttered by domain complexity, auth, UI polish, or infra you don't need to learn RAG.
+**What this is.** A ~3 hour 50 minute, hands-on crash course that teaches the complete mechanics behind a production-grade Retrieval-Augmented Generation pipeline — documents → chunks → embeddings → vector index → retrieval → query transformation → reranking → prompt augmentation → generation → evaluation — using a small internal knowledge base for a fictional B2B corporate-apparel and gifting manufacturer, **Turab Industries Pvt. Ltd.**, as the vehicle. It's deliberately small so the RAG concepts stay visible and uncluttered by domain complexity, auth, UI polish, or infra you don't need to learn RAG.
 
-**What's new in this version.** This roadmap has been refined against `month-02-roadmap.md` — your Week 5–6 GenAI Engineer curriculum. Every technique below now carries that roadmap's own priority label (🔴 Essential / 🟡 Important / 🟢 Optional) and, where it applies, names which RAG architecture pattern (Naive, Advanced, Modular, Agentic, GraphRAG) it belongs to. Nothing about the philosophy changed — still lean, still hands-on, still one working app — but three genuinely load-bearing mental models that were previously missing got added: **RAG architecture patterns** (Lesson 2), **parent-child chunking** (Lesson 3, theory only), and **query transformation + hybrid retrieval awareness** (new Lesson 6.5). Adding these honestly pushed total time from ~2h55m to ~3h20m — flagged plainly rather than pretending otherwise. If you want to hold the line closer to the original estimate, Lesson 2's Modular RAG/GraphRAG aside and Lesson 3's parent-child callout are both skimmable in under a minute each without losing anything you'll be graded on in the Done-When checks.
+**What's new in this version.** This roadmap has been refined against `month-02-roadmap.md` — your Week 5–6 GenAI Engineer curriculum. Every technique below now carries that roadmap's own priority label (🔴 Essential / 🟡 Important / 🟢 Optional) and, where it applies, names which RAG architecture pattern (Naive, Advanced, Modular, Agentic, GraphRAG) it belongs to. On top of that Month-2 alignment pass, this revision swaps the domain to Turab Industries, adds Lesson 2.5 (Tier-1 PDF ingestion, ~15 min), and expands Lesson 3 with an implemented Parent-Child chunking comparison (~+12 min). Total time moved from ~3h20m to ~3h50m — flagged plainly, and explicitly fine by Kamran's own call, since the added lessons directly deepen mental models (multi-format ingestion, chunking strategy trade-offs) rather than padding the course.
 
 **What you'll be able to do afterward.** Explain, from first principles and with working code you wrote yourself, why each stage of a RAG pipeline exists, what specifically breaks when you skip it, and what the beginner/production/enterprise version of that stage looks like — then defend those choices in a design review or interview. You'll also be able to correctly classify what you built ("this is Naive RAG… now it's Advanced RAG") and name what's still required to push it further to Agentic — using the exact vocabulary your Month 2 roadmap uses.
 
-**Domain used.** Six short markdown docs (`deploy.md`, `auth.md`, `rate_limits.md`, `on_call.md`, `migrations.md`, `incident_response.md`) simulating an internal developer-platform knowledge base, each with lightweight metadata (`team`, `doc_type`). That's the entire corpus — deliberately thin, because the learning goal is RAG mechanics, not document management.
+**Domain used.** Eight source documents simulating Turab Industries Pvt. Ltd.'s internal knowledge base — a real company would keep some of this as an internal wiki (markdown) and some as formally distributed, versioned documents (PDF), and this course's corpus reflects that split on purpose:
 
-**Explicitly out of scope for this crash course:** authentication, a database for app state, Alembic-style migrations, a frontend, CI/CD, Kubernetes, multi-tenant infra, LangGraph orchestration, and full production observability. Every lesson flags exactly what it's skipping and why, and the recap (Lesson 11) tells you what to build next once this is done — most of it is exactly Month 2, Weeks 6–8.
+- Six markdown docs (`hr_policies.md`, `employee_benefits_leave.md`, `travel_expense_policy.md`, `procurement_guidelines.md`, `product_catalog_faq.md`, `product_catalog_services_guide.md`) — Lesson 1.
+- Two PDFs (`corporate_gifts_price_list.pdf`, `company_overview.pdf`) — Claude-generated markdown content, converted to PDF by Kamran himself, loaded in Lesson 2.5.
+
+Each doc carries lightweight metadata: `team` (`leadership` | `hr` | `finance` | `operations` | `sales`) and `doc_type` (`guide` | `policy` | `faq` | `catalog`) — you'll use exactly these two fields for metadata filtering in Lesson 6.
+
+**Explicitly out of scope for this crash course:** authentication, a database for app state, Alembic-style migrations, a frontend, CI/CD, Kubernetes, multi-tenant infra, LangGraph orchestration, full production observability, arbitrary client-side file uploads, upload validation/security, and OCR (this course's PDF handling in Lesson 2.5 is **Tier 1 only** — a known, pre-created PDF loaded the same way as any other seed doc, not a user-facing upload endpoint with format sniffing, size limits, or malware scanning). Every lesson flags exactly what it's skipping and why, and the recap (Lesson 11) tells you what to build next once this is done — most of it is exactly Month 2, Weeks 6–8.
 
 **How to use this document.** Work top to bottom. Each lesson is self-contained: objective, why it matters, what to build, a short illustrative code pattern (for your own mental model), and a ready-to-paste "AI Build Prompt" you can hand to a coding assistant to generate the actual implementation. Do the "Done When" check before moving on — RAG bugs are almost always silent (a wrong answer that *sounds* confident), and they compound if you don't verify each stage independently.
 
-**Total time:** ~3 hours 20 minutes. Natural split point: Lessons 1–5 (~1h30, gets you to a populated, queryable vector index) and Lessons 6–11 (~1h50, retrieval, query transformation, generation, the full app, evaluation, and production hardening).
+**Total time:** ~3 hours 50 minutes. Natural split point: Lessons 1–5 (~1h55, now including Lesson 2.5's PDF ingestion, gets you to a populated, queryable vector index) and Lessons 6–11 (~1h55, retrieval, query transformation, generation, the full app, evaluation, and production hardening).
 
 **Assumed prerequisites (per your setup):** you already have an `OPENAI_API_KEY` and a `PINECONE_API_KEY`, Python 3.13+ and `uv` installed. This course does not walk you through obtaining either key or installing base tooling.
 
@@ -35,6 +42,7 @@ Before starting, here's what was fact-checked against current PyPI releases and 
 - **OpenAI's `text-embedding-3-small` and `text-embedding-3-large` are both still current and non-deprecated** as of mid-2026 (only `text-embedding-ada-002` is legacy). This course defaults to `-small` (1536 dimensions, the cost-effective default most teams start with) and Lesson 10 shows the one-line swap to `-large` as an optimization lever.
 - **Pinecone ships a hosted reranker** (`pc.inference.rerank`, model `bge-reranker-v2-m3`) reachable with the same Pinecone API key you already have — no third-party reranking key needed. Lesson 10 uses this instead of pulling in a separate reranking provider, to keep the dependency surface to exactly what you told me you have credentials for.
 - **On chat model naming:** OpenAI's flagship chat model name changes faster than this document can stay accurate (multiple GPT-5.x releases shipped between March and July 2026 alone). Code below uses `gpt-4.1` as a concrete, currently-valid, long-context API model so every snippet actually runs — but the generation model is the least RAG-specific part of this stack. Swap `CHAT_MODEL` in your `.env` for whatever current flagship your account has access to; nothing else in the pipeline changes.
+- **`pypdf` (used via `langchain-community`'s `PyPDFLoader`, Lesson 2.5) is the standard, current library for PDF text extraction in this stack.** No additional API key or external service — it's pure local text extraction from the file's bytes, same trust boundary as reading a markdown file off disk.
 
 None of this affects sequencing — proceed lesson by lesson exactly as written.
 
@@ -56,7 +64,7 @@ This crash course is scoped to be the "why does any of this actually work" found
 | Lesson 3 | Fixed-Size Chunking | 🔴 | 5.2 |
 | Lesson 3 | Recursive Chunking (`RecursiveCharacterTextSplitter`) | 🔴 | 5.2 |
 | Lesson 3 (theory aside) | Semantic Chunking | 🟡 | 5.2 |
-| Lesson 3 (theory only, not implemented) | Parent-Child Chunking | 🔴 | 5.2 |
+| Lesson 3 (implemented, lightweight comparison) | Parent-Child Chunking | 🔴 | 5.2 |
 | Lesson 4 | Embeddings / embedding model choice | — | prerequisite to all of Week 5 |
 | Lesson 5 | Vector store indexing | — | prerequisite to all of Week 5 |
 | Lesson 6 | Metadata Extraction / filtering | 🔴 | 5.4 |
@@ -69,6 +77,7 @@ This crash course is scoped to be the "why does any of this actually work" found
 | — not built here — | Corrective RAG, Adaptive RAG, Self-RAG | 🔴 / 🔴 / 🟢 | 6.3 |
 | — not built here — | LangGraph orchestration, query routing | 🔴 | 6.2, 6.4 |
 | — not built here — | Caching, observability, deployment | — | 6.5, 7.x, 8.x |
+| — not built here (Tier 2/3, Lesson 2.5 names the boundary) — | Production ingestion APIs, upload validation | — | 6.5, 8.x |
 
 **The one-sentence version of this whole table:** by the end of Lesson 10, what you've built is concretely **Advanced RAG** — Naive RAG's straight-line pipeline (Lessons 1–8) with the two defining Advanced-RAG upgrades layered on top: a **pre-retrieval** improvement (query transformation, Lesson 6.5) and a **post-retrieval** improvement (reranking, Lesson 10). Lesson 11 names this explicitly and shows exactly what's still missing to earn the label "Agentic."
 
@@ -100,7 +109,7 @@ uv add --dev ruff
 | `pydantic-settings` | typed `.env` loading |
 | `ruff` | dev-only linting |
 
-Notice what's **not** here yet: `fastapi` (Lesson 8), `ragas` (Lesson 9). Installing them now would work fine, but pulling dependencies in at the lesson that actually needs them keeps you from debugging an import you haven't used yet.
+Notice what's **not** here yet: `fastapi` (Lesson 8), `ragas` (Lesson 9), and `pypdf`/`langchain-community` (Lesson 2.5). Installing them now would work fine, but pulling dependencies in at the lesson that actually needs them keeps you from debugging an import you haven't used yet.
 
 ### 🛠️ What To Build
 ```text
@@ -109,19 +118,21 @@ rag-crash-course/
   pyproject.toml
   data/
     docs/
-      deploy.md
-      auth.md
-      rate_limits.md
-      on_call.md
-      migrations.md
-      incident_response.md
+      hr_policies.md
+      employee_benefits_leave.md
+      travel_expense_policy.md
+      procurement_guidelines.md
+      product_catalog_faq.md
+      product_catalog_services_guide.md
+      # corporate_gifts_price_list.pdf         <- joins here in Lesson 2.5
+      # company_overview.pdf                   <- joins here in Lesson 2.5
   src/
     rag/
       __init__.py
       config.py              # pydantic-settings
       ingestion/
         __init__.py
-        loader.py             # Lesson 3
+        loader.py             # Lesson 3 (extended in Lesson 2.5 for PDFs)
         chunker.py            # Lesson 3
       indexing/
         __init__.py
@@ -144,12 +155,12 @@ rag-crash-course/
 ```text
 OPENAI_API_KEY=sk-...
 PINECONE_API_KEY=pcsk-...
-PINECONE_INDEX_NAME=devportal-kb
+PINECONE_INDEX_NAME=turab-industries
 EMBEDDING_MODEL=text-embedding-3-small
 CHAT_MODEL=gpt-4.1
 ```
 
-The six seed docs — short, deliberately thin, ~150–250 words each, one topic per file: a deployment runbook, an auth/token policy doc, a rate-limits reference, an on-call rotation guide, a database-migration checklist, and an incident-response playbook. Each doc gets `team` (`platform` | `security` | `data`) and `doc_type` (`runbook` | `policy` | `guide`) metadata — you'll use exactly these two fields for metadata filtering in Lesson 6.
+The six seed docs — short, deliberately company-specific, ~250–300 words each, one topic per file, covering **Turab Industries Pvt. Ltd.**, a fictional B2B manufacturer of corporate apparel, uniforms, promotional merchandise, and employee welcome kits/gifting: HR policies, employee benefits & leave policy, a travel & expense policy, procurement guidelines, a product catalog / customer FAQ, and a product catalog & corporate services guide. (Company Overview is still Claude-generated markdown content, but Kamran is converting it to PDF alongside the price list — it joins the corpus in Lesson 2.5, not here.) Each doc gets `team` (`hr` | `finance` | `operations` | `sales`) and `doc_type` (`guide` | `policy` | `faq`) metadata — deliberately specific enough (real notice periods, real leave accrual rates, real MOQs) that a RAG answer grounded in these docs is visibly *not* something the model could have guessed from general knowledge — you'll lean on this in Lesson 9's evaluation to confirm faithfulness for real, not just plausibly.
 
 ### 🤖 AI Build Prompt
 ```text
@@ -159,20 +170,32 @@ Generate:
    EMBEDDING_MODEL (default "text-embedding-3-small"), and CHAT_MODEL
    (default "gpt-4.1") from .env. Export a module-level `settings`
    instance.
-2. Six short markdown files under data/docs/ for a fictional internal
-   developer platform: deploy.md (deployment runbook), auth.md
-   (token/auth policy), rate_limits.md (API rate-limit reference),
-   on_call.md (on-call rotation guide), migrations.md (DB migration
-   checklist), incident_response.md (incident playbook). Each 150-250
-   words, plain prose, no frontmatter.
+2. Six short markdown files under data/docs/ for a fictional B2B
+   corporate apparel/gifting manufacturer called Turab Industries
+   Pvt. Ltd.: hr_policies.md (working hours, probation, notice period,
+   disciplinary process), employee_benefits_leave.md (leave types,
+   accrual, insurance, PF/gratuity), travel_expense_policy.md (travel
+   approval, per diem, reimbursement), procurement_guidelines.md
+   (vendor approval, PO thresholds, sourcing), product_catalog_faq.md
+   (product lines, MOQ, customization, lead times, payment terms),
+   product_catalog_services_guide.md (product-line depth, corporate
+   services offered, why enterprise clients choose Turab). Each
+   250-300 words, plain prose, no frontmatter, with concrete, specific
+   facts (real-sounding numbers, days, percentages) rather than vague
+   generalities. (company_overview is also Claude-generated markdown
+   content, but Kamran is converting it to PDF alongside the price
+   list — see Lesson 2.5, not built here.)
 3. A Python dict DOC_METADATA in src/rag/ingestion/loader.py (stub for
    now) mapping each filename to {"team": ..., "doc_type": ...} using:
-   deploy.md/platform/runbook, auth.md/security/policy,
-   rate_limits.md/platform/policy, on_call.md/platform/runbook,
-   migrations.md/data/runbook, incident_response.md/security/runbook.
+   hr_policies.md/hr/policy,
+   employee_benefits_leave.md/hr/policy,
+   travel_expense_policy.md/finance/policy,
+   procurement_guidelines.md/operations/guide,
+   product_catalog_faq.md/sales/faq,
+   product_catalog_services_guide.md/sales/guide.
 
-Do not add FastAPI, a database, or the ragas dependency yet — those
-are separate lessons.
+Do not add FastAPI, a database, the ragas dependency, or PDF handling
+yet — those are separate lessons (8, 9, and 2.5 respectively).
 ```
 
 ### ✅ Done When
@@ -199,7 +222,10 @@ Why RAG exists at all
   time and hand them to the model as context — cheap, instantly
   updatable, and the model's reasoning ability still does the work).
   RAG doesn't make the model smarter; it makes the model's existing
-  reasoning ability operate on the right facts.
+  reasoning ability operate on the right facts. This distinction
+  matters concretely here: no base LLM has ever seen Turab Industries'
+  actual notice-period policy — RAG is the only way it answers that
+  correctly rather than plausibly.
 
 Document
   Your raw source of truth (a markdown file, a PDF, a wiki page).
@@ -251,7 +277,7 @@ The stages above describe *a* RAG pipeline. There isn't just one shape a RAG pip
 
 **Agentic RAG** — the LLM itself decides *whether* to retrieve, *how many times*, and *with what query*, instead of retrieval being a fixed step in a fixed pipeline. It can re-search with a refined query, skip retrieval entirely for something it can answer directly, or pull from multiple sources and reconcile them. This requires a pipeline that can branch and loop — the same graph machinery from your **memory crash course** (`StateGraph`, conditional edges, cycles), applied to a retrieval decision instead of conversation state. Deliberately not built in this course (see Lesson 11's bridge) — you need Naive and Advanced solid first, or you have no way to tell whether an agentic pipeline's extra latency and complexity is actually earning its cost on a given query.
 
-*(Two more patterns are worth recognizing by name, even though this course doesn't touch them — both Month 2, Lesson 5.1, both 🟡: **Modular RAG** treats each stage — retriever, reranker, generator — as an independently swappable component, useful once a team is benchmarking and optimizing pieces separately. **GraphRAG** replaces the flat vector index with a knowledge graph, for questions about how entities *relate* to each other rather than what's topically similar — "how are these three vendors connected to our supply chain disruptions" is a GraphRAG question a vector index structurally cannot answer well, no matter how good your chunking is.)*
+*(Two more patterns are worth recognizing by name, even though this course doesn't touch them — both Month 2, Lesson 5.1, both 🟡: **Modular RAG** treats each stage — retriever, reranker, generator — as an independently swappable component, useful once a team is benchmarking and optimizing pieces separately. **GraphRAG** replaces the flat vector index with a knowledge graph, for questions about how entities *relate* to each other rather than what's topically similar — "which of our vendors also supply our top three apparel-fabric competitors" is a GraphRAG question a vector index structurally cannot answer well, no matter how good your chunking is.)*
 
 ### 🤖 AI Build Prompt
 None — this lesson is conceptual. To sanity-check your own understanding, ask an AI tool two things: (1) *"If a RAG app confidently answers a question wrong, list the distinct pipeline stages that could be the root cause, and for each, what a symptom that isolates it would look like."* A good answer distinguishes at minimum: bad chunking (answer exists in the doc but got split across a boundary), bad embedding/retrieval (right chunk exists in the index but wasn't retrieved), bad augmentation (right chunk was retrieved but the prompt buried or mishandled it), and bad generation (model ignored good context and used its own prior knowledge instead). (2) *"Why does Advanced RAG's definition specifically split into pre-retrieval and post-retrieval fixes, rather than just being 'any RAG system with more features bolted on'?"* A good answer lands on: because those are precisely the two points in the Naive RAG pipeline where a targeted, swappable fix can improve quality without changing the pipeline's linear shape — which is exactly why this course's Lesson 6.5 and Lesson 10 map onto those two exact points.
@@ -260,17 +286,105 @@ None — this lesson is conceptual. To sanity-check your own understanding, ask 
 
 ---
 
+## 2.5. Lesson 2.5 — PDF Ingestion (Tier 1)
+
+### 🎯 Objective
+Extend ingestion to a second file format — real PDFs, not just markdown — so the pipeline works over a mixed-format corpus, which is what every real knowledge base actually looks like.
+
+### 🧠 Why This Matters
+Real companies don't keep every document as a wiki page. Formal, versioned, or archival material — price lists, catalogs, compliance policies — gets distributed as PDF, while day-to-day internal notes stay markdown. Turab Industries is no different: its price list and services catalog are the kind of document that gets emailed to clients and printed for trade shows, which means PDF, not markdown.
+
+This lesson is explicitly scoped as **Tier 1** of a three-tier spectrum worth naming so you know exactly what you are and aren't building:
+
+- **Tier 1 (this lesson):** two known, pre-created PDFs, generated as markdown content and converted to PDF by you, loaded into the pipeline the same way any other seed doc is — no upload endpoint, no client, no validation. The only new thing is *how the text gets extracted from the file*.
+- **Tier 2 (not built here):** an actual HTTP upload endpoint accepting a client-supplied file — needs FastAPI (Lesson 8), multipart form handling, and a decision about synchronous vs. background processing.
+- **Tier 3 (not built here):** production-grade validation and security for arbitrary client uploads — sniffing real file bytes instead of trusting the client's claimed extension, size limits enforced before reading the whole file into memory, malware scanning, OCR fallback for scanned/image-only PDFs, and safe, non-filename-derived storage IDs (a malicious filename used to build a file path is a real path-traversal vulnerability, not a theoretical one).
+
+Tiers 2 and 3 are genuine, valuable production skills — but they're general backend/security engineering, not RAG-specific, and they'd roughly double this course's time budget for no gain in RAG mental models. This lesson stays at Tier 1 on purpose.
+
+### 📥 Dependencies
+```bash
+uv add pypdf langchain-community
+```
+
+`langchain-community` is where LangChain's `PyPDFLoader` lives (it's a separate package from core `langchain`, precisely because it pulls in format-specific parsing libraries — `pypdf` — that most LangChain users never need). `pypdf` does the actual byte-level PDF parsing underneath.
+
+### 🛠️ What To Build
+Extend `src/rag/ingestion/loader.py` from Lesson 1:
+- Add the two new PDF filenames to the *same* `DOC_METADATA` dict — no new lookup table needed, since the dict is already keyed by filename regardless of extension: `corporate_gifts_price_list.pdf` (`sales` / `catalog`) and `company_overview.pdf` (`leadership` / `guide`). Note this introduces both a fourth `doc_type` value (`catalog`) and the `leadership` `team` value, alongside the three doc_types and four teams already in use from Lesson 1.
+- Extend `load_documents()` to dispatch on file suffix: `.md` files keep Lesson 1's raw-read logic; `.pdf` files go through `PyPDFLoader`, which returns **one `Document` per PDF page**, not one per file — a structural difference from markdown loading that every page-Document's metadata needs to account for.
+
+### 💡 Core Pattern
+```python
+# The point of this snippet: PyPDFLoader returns ONE Document per
+# PAGE, not one per file — unlike your markdown loader, which returns
+# one Document per file. Every page-Document from the same PDF still
+# needs the SAME team/doc_type (it's the same source document), but
+# keeps its own page number so later stages can tell pages apart.
+from pathlib import Path
+
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_core.documents import Document
+
+from rag.ingestion.loader import DOC_METADATA  # same lookup, two new keys
+
+
+def load_pdf(path: Path) -> list[Document]:
+    pages = PyPDFLoader(str(path)).load()
+    metadata = DOC_METADATA[path.name]
+    for page in pages:
+        # PyPDFLoader already sets metadata["page"] — we only add the
+        # fields the rest of the pipeline expects on every Document.
+        page.metadata.update({"source": path.name, **metadata})
+    return pages
+```
+
+### 🤖 AI Build Prompt
+```text
+Extend src/rag/ingestion/loader.py from Lesson 1, using
+langchain-community's PyPDFLoader:
+1. Add two entries to the existing DOC_METADATA dict:
+   corporate_gifts_price_list.pdf -> {"team": "sales", "doc_type": "catalog"}
+   company_overview.pdf -> {"team": "leadership", "doc_type": "guide"}
+2. Update load_documents() to dispatch by file suffix: .md files keep
+   the existing Lesson 1 logic; .pdf files load via PyPDFLoader(path)
+   .load(), then have "source" plus the DOC_METADATA team/doc_type
+   attached onto EVERY page-Document returned (PyPDFLoader already
+   sets a "page" field per Document — do not overwrite it).
+3. A __main__ preview (or extend Lesson 3's ingestion preview script)
+   that prints, for each of the two PDFs: total page count, and the
+   first page's metadata keys, so you can visually confirm source/
+   team/doc_type/page are all present.
+
+Do not build an upload endpoint, add file validation, or add OCR —
+those are explicitly out of scope (Tier 2/3, see this lesson's
+"Why This Matters").
+```
+
+### ✅ Done When
+The preview script runs with no errors, shows both PDFs loaded with a sensible page count (a multi-page brochure-style PDF should show more than 1 page), and every printed page's metadata includes `source`, `team`, `doc_type`, and `page`.
+
+### 🔑 Concepts You Must Be Able to Explain
+Why `PyPDFLoader` is page-granular, not file-granular, and why that means metadata has to be applied per-page rather than assumed to carry over automatically the way `RecursiveCharacterTextSplitter` carries it over in Lesson 3. Why dispatching by file suffix inside `loader.py` means nothing in `chunker.py`, `embed_and_index.py`, or `retriever.py` needs to know or care that some source documents are PDFs — they only ever see `Document` objects, regardless of source format. Where Tier 1 stops and Tier 2/3 begin, and why that boundary is drawn at "known file, no client" vs. "arbitrary file, from a client."
+
+### ⏭️ Deferred (Production Extension)
+OCR fallback for scanned/image-only PDFs (no text layer to extract at all); an actual upload endpoint and client-side file (Tier 2, needs Lesson 8's FastAPI groundwork); file validation and security — real byte-sniffing instead of trusting extensions, malware scanning, non-filename-derived storage IDs (Tier 3); loaders for other formats (`.docx`, `.pptx`, `.csv`) following this exact same dispatch-by-suffix pattern once a real corpus needs them.
+
+### ⏱️ ~15 minutes
+
+---
+
 ## 3. Lesson 3 — Documents → Chunks
 
 ### 🎯 Objective
-Load the seed docs and split them into retrievable chunks, carrying doc-level metadata onto every chunk.
+Load the seed docs and split them into retrievable chunks, carrying doc-level metadata onto every chunk — and, since Lesson 2.5 already extended your corpus to include two PDFs, build and compare a second chunking strategy so you've felt the trade-off firsthand, not just read about it.
 
 ### 🧠 Why This Matters
 This is the stage most tutorials treat as boilerplate and most production incidents trace back to. A chunk is the *unit of retrievable meaning* — get the boundary wrong and you can have the answer sitting in your corpus, correctly embedded, correctly indexed, and still never surface it, because the sentence that answers the question got split from the sentence that gives it context.
 
-**Beginner approach — fixed-size character chunking** *(Month 2 label: Fixed-Size Chunking 🔴 — Lesson 5.2).* Split every N characters, ignoring structure. Fast to implement, frequently cuts mid-sentence or mid-code-block. Fine for a demo, wrong for anything you'll evaluate.
+**Beginner approach — fixed-size character chunking** *(Month 2 label: Fixed-Size Chunking 🔴 — Lesson 5.2).* Split every N characters, ignoring structure. Fast to implement, frequently cuts mid-sentence or mid-table-row. Fine for a demo, wrong for anything you'll evaluate.
 
-**Production approach — recursive, structure-aware chunking** *(Month 2 label: Recursive Chunking 🔴 — Lesson 5.2).* `RecursiveCharacterTextSplitter` tries a list of separators in priority order (`"\n\n"`, `"\n"`, `" "`, `""`) and only falls back to a harder split when a chunk still exceeds `chunk_size`. In practice this means it splits on paragraph boundaries first, and only cuts mid-sentence as a last resort. This is the default a production team should reach for unless they've measured a reason not to.
+**Production approach — recursive, structure-aware chunking** *(Month 2 label: Recursive Chunking 🔴 — Lesson 5.2).* `RecursiveCharacterTextSplitter` tries a list of separators in priority order (`"\n\n"`, `"\n"`, `" "`, `""`) and only falls back to a harder split when a chunk still exceeds `chunk_size`. In practice this means it splits on paragraph boundaries first, and only cuts mid-sentence as a last resort. This is the default a production team should reach for unless they've measured a reason not to, and it's what this course actually indexes and queries from Lesson 5 onward.
 
 **Enterprise approach — semantic / layout-aware chunking** *(Month 2 label: Semantic Chunking 🟡 — Lesson 5.2).* For heterogeneous corpora (PDFs with tables, HTML with nested sections, code with function boundaries), you chunk on document *structure* (markdown headers, HTML sections, AST nodes for code) or on *semantic similarity* (embed sentences, cut where consecutive-sentence similarity drops — "semantic chunking"). More expensive to build and run, but it's what closes the gap when recursive character chunking still produces chunks that mix unrelated topics.
 
@@ -280,13 +394,21 @@ This is the stage most tutorials treat as boilerplate and most production incide
 - **Overlap** (commonly 10–20% of chunk size) prevents losing a sentence that straddles a boundary, at the cost of duplicate content inflating your index size and, at query time, sometimes retrieving near-duplicate chunks that don't add information.
 - Common mistake: picking chunk size once, never revisiting it. Chunk size is a hyperparameter you tune against Lesson 9's evaluation numbers, not a constant you set on day one and forget.
 
-**A fourth approach worth naming even though this course doesn't implement it — parent-child chunking** *(Month 2 label: Parent-Child Chunking 🔴 — Lesson 5.2).* It attacks the chunk-size tradeoff from a different angle than "pick one size and live with it." Instead of embedding and retrieving the same chunk, you embed small, precise **child** chunks (e.g. 150–200 tokens — great for matching a specific question tightly) but store a pointer from each child to a larger **parent** chunk (e.g. 800–1000 tokens). When a child chunk wins the similarity search, you don't hand the LLM that small child — you fetch and hand it the parent, giving the model full surrounding context for an answer that was *found* with maximum precision.
+### 🏗️ Parent-Child Chunking — Implemented Comparison, Not (Yet) the Production Path
+*(Month 2 label: Parent-Child Chunking 🔴 — Lesson 5.2)*
 
-Why this course doesn't implement it: parent-child retrieval needs a second storage layer — a docstore mapping child IDs to parent text, separate from the vector index — plus retrieval logic that does the child→parent lookup after the vector search returns. That's real, justified production infrastructure, not busywork, but it's disproportionate to a six-document corpus where a single recursively-split chunk already contains full context on its own. Reach for parent-child chunking when your production documents are long enough that a chunk sized right for retrieval precision (small) stops being large enough for generation context (needs to be bigger) — Month 2, Lesson 5.2 builds this for real, alongside hierarchical chunking (document > section > paragraph, 🟡) for corpora with strong structural hierarchy like legal or technical manuals.
+Parent-child attacks the chunk-size tradeoff from a different angle than "pick one size and live with it." Instead of embedding and retrieving the same chunk, you embed small, precise **child** chunks (great for matching a specific question or a specific price-list row tightly) but keep a pointer from each child to a larger **parent** chunk. When a child chunk wins a similarity search, you don't hand the LLM that small child — you fetch and hand it the parent, giving the model full surrounding context for an answer that was *found* with maximum precision.
+
+**When recursive chunking alone is the right call:** your chunks are already roughly self-contained — a single HR policy paragraph that fully explains one rule needs no extra context to be useful on its own. This is most of `hr_policies.md`, `employee_benefits_leave.md`, and similar prose-heavy docs. One storage layer, simpler to reason about, and it's what this course's real indexing/retrieval path (Lessons 4 onward) actually uses.
+
+**When parent-child earns its cost:** the *precise matching unit* is much smaller than the *context needed to use it correctly* — exactly the shape of `corporate_gifts_price_list.pdf`. A query about "steel water bottle price" should match a single small table row, but that row alone (`₹340 | ₹300 | ₹265 | 250`) is meaningless without the column headers and product name sitting a few lines above it in the source document. Tables, price lists, and clause-heavy policy documents are the recurring shape where this shows up.
+
+**The real cost, unchanged from the original assessment:** production parent-child retrieval needs a *second storage layer* — a docstore mapping child IDs to parent text, separate from the vector index — plus retrieval logic that does the child→parent lookup after the vector search returns. That's genuine infrastructure, and this course deliberately does **not** wire it into the actual pipeline: Lessons 4 onward continue indexing and retrieving the recursive chunks only. What follows is a small, standalone, in-memory comparison — built with your own hands, run once, and set aside — so you understand the trade-off before Month 2, Lesson 5.2 builds the real, wired-in version.
 
 ### 🛠️ What To Build
-- `ingestion/loader.py` — reads every `.md` under `data/docs/`, attaches `team`/`doc_type` metadata per file, returns a list of LangChain `Document` objects (`page_content` + `metadata`).
+- `ingestion/loader.py` — reads every `.md` under `data/docs/` (Lesson 1) plus the two `.pdf`s (Lesson 2.5), attaches `team`/`doc_type` metadata per file, returns a list of LangChain `Document` objects (`page_content` + `metadata`).
 - `ingestion/chunker.py` — `RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=75)`, splits each `Document`, and propagates the parent doc's metadata onto every chunk plus a `source` field (the filename) and a stable `chunk_id`.
+- `ingestion/parent_child_demo.py` — a standalone comparison script (not wired into indexing): builds both a recursive-chunk list and a parent/child structure over the same loaded documents, then prints a side-by-side comparison for one hardcoded search term.
 
 ### 💡 Core Pattern
 ```python
@@ -309,18 +431,72 @@ def chunk_documents(docs: list[Document]) -> list[Document]:
     return chunks
 ```
 
+```python
+# Parent-child comparison demo — deliberately NOT wired into indexing.
+# No embeddings needed here (Lesson 4 hasn't happened yet): the
+# comparison is structural — same search term, three different
+# outputs — not a real similarity search.
+from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+
+def build_parent_child(docs: list[Document]) -> tuple[list[Document], dict[str, Document]]:
+    parent_splitter = RecursiveCharacterTextSplitter(chunk_size=900, chunk_overlap=100)
+    child_splitter = RecursiveCharacterTextSplitter(chunk_size=180, chunk_overlap=20)
+
+    parents = parent_splitter.split_documents(docs)
+    parent_store: dict[str, Document] = {}
+    children: list[Document] = []
+
+    for i, parent in enumerate(parents):
+        parent_id = f"{parent.metadata['source']}::parent::{i}"
+        parent_store[parent_id] = parent
+        for child in child_splitter.split_documents([parent]):
+            child.metadata["parent_id"] = parent_id  # the only new field needed
+            children.append(child)
+
+    return children, parent_store
+
+
+def compare(term: str, recursive_chunks: list[Document], children: list[Document], parent_store: dict) -> None:
+    print(f"--- Searching for: {term!r} ---")
+
+    for c in recursive_chunks:
+        if term.lower() in c.page_content.lower():
+            print(f"[Recursive] {len(c.page_content)} chars:\n{c.page_content}\n")
+            break
+
+    for child in children:
+        if term.lower() in child.page_content.lower():
+            parent = parent_store[child.metadata["parent_id"]]
+            print(f"[Parent-Child] child ({len(child.page_content)} chars):\n{child.page_content}\n")
+            print(f"[Parent-Child] resolved parent ({len(parent.page_content)} chars):\n{parent.page_content}\n")
+            break
+```
+
 ### 🤖 AI Build Prompt
 ```text
 Using langchain-core and langchain-text-splitters, generate:
 1. src/rag/ingestion/loader.py — load_documents() that reads every
-   .md file from data/docs/, wraps each as a langchain_core.documents
-   .Document, and attaches metadata {"source": filename, "team":...,
-   "doc_type": ...} using the DOC_METADATA mapping from Lesson 1.
+   .md file from data/docs/ (Lesson 1 logic) AND every .pdf file
+   (Lesson 2.5's PyPDFLoader dispatch), wraps each as a
+   langchain_core.documents.Document, and attaches metadata
+   {"source": filename, "team": ..., "doc_type": ...} using the
+   DOC_METADATA mapping from Lesson 1/2.5.
 2. src/rag/ingestion/chunker.py — chunk_documents(docs) using
    RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=75),
    propagating parent metadata onto every chunk and adding a
    deterministic "chunk_id" field (f"{source}::{index}").
-3. A __main__ block (or src/rag/ingestion/run_ingest_preview.py) that
+3. src/rag/ingestion/parent_child_demo.py — build_parent_child(docs)
+   exactly as shown above (parent chunk_size=900/overlap=100, child
+   chunk_size=180/overlap=20, parent_id linking), plus a compare(term,
+   ...) function and a __main__ block that runs compare() for the
+   term "steel water bottle" against corporate_gifts_price_list.pdf's
+   loaded content, printing the recursive chunk, the matching child
+   chunk, and its resolved parent side by side. Do NOT wire this into
+   embed_and_index.py or retriever.py — this stays a standalone,
+   unindexed comparison script.
+4. A __main__ block (or src/rag/ingestion/run_ingest_preview.py) that
    loads, chunks, and prints: total chunk count, and for the longest
    document, how many chunks it produced and their character lengths.
 Do not call any embedding or Pinecone API yet — this lesson stops at
@@ -328,15 +504,15 @@ plain-text chunks.
 ```
 
 ### ✅ Done When
-Running the preview script shows a reasonable chunk count (roughly 2–4 chunks per seed doc at this size) and every printed chunk's metadata includes `source`, `team`, `doc_type`, and `chunk_id` — confirm by eye that no chunk's `page_content` cuts off mid-sentence in a way that would lose meaning.
+Running the preview script shows a reasonable chunk count (roughly 2–4 chunks per seed doc at this size, more for the two PDFs) and every printed chunk's metadata includes `source`, `team`, `doc_type`, and `chunk_id` — confirm by eye that no chunk's `page_content` cuts off mid-sentence in a way that would lose meaning. Separately, running `parent_child_demo.py` for the term `"steel water bottle"` should visibly show the recursive chunk containing only the matching table row (or close to it), versus the parent-child output showing the same small, precise child match *plus* a larger parent that includes the surrounding price-table headers — the concrete, printed proof of the trade-off, not just the theory.
 
 ### 🔑 Concepts You Must Be Able to Explain
-Why chunk size is a tradeoff and not a constant. Why metadata has to be attached before splitting, not after. What "recursive" means in `RecursiveCharacterTextSplitter` — it's not recursion over documents, it's a priority-ordered fallback through separators. In one sentence, what problem parent-child chunking solves that recursive chunking alone cannot.
+Why chunk size is a tradeoff and not a constant. Why metadata has to be attached before splitting, not after. What "recursive" means in `RecursiveCharacterTextSplitter` — it's not recursion over documents, it's a priority-ordered fallback through separators. When parent-child chunking earns its extra storage-layer cost over recursive chunking alone (small precise match, larger context needed to use it), and what specifically breaks without it (the exact failure you saw in the price-list comparison).
 
 ### ⏭️ Deferred (Production Extension)
-Semantic/embedding-based chunk-boundary detection, layout-aware chunking for PDFs/HTML with tables, parent-child chunking (theory covered above), hierarchical chunking for structurally hierarchical corpora, and chunk-size auto-tuning against eval metrics (Lesson 9 gives you the harness; wiring an automated sweep is a natural next step once this course ends).
+Wiring parent-child chunking into the actual indexing/retrieval pipeline as the real production path, instead of a standalone comparison script (Month 2, Lesson 5.2 builds this for real, with `ParentDocumentRetriever` and a proper docstore); semantic/embedding-based chunk-boundary detection; layout-aware chunking for PDFs/HTML with tables (would improve on the price list's table extraction specifically); hierarchical chunking for structurally hierarchical corpora; chunk-size auto-tuning against eval metrics (Lesson 9 gives you the harness; wiring an automated sweep is a natural next step once this course ends).
 
-### ⏱️ ~24 minutes
+### ⏱️ ~36 minutes (24 original + ~12 for the Parent-Child comparison)
 
 ---
 
@@ -355,10 +531,10 @@ What an embedding is
   A fixed-length list of floats (1536 numbers for text-embedding-3-
   small) positioning a piece of text in a high-dimensional space,
   such that texts with similar MEANING end up at similar POSITIONS —
-  not similar spelling. "How do I reset my password" and "steps to
-  recover account access" land near each other despite sharing almost
-  no words. This is the entire reason semantic search beats keyword
-  search for natural-language questions.
+  not similar spelling. "How many days notice before I resign" and
+  "what's the minimum notice period to quit my job" land near each
+  other despite sharing almost no words. This is the entire reason
+  semantic search beats keyword search for natural-language questions.
 
 Why cosine similarity
   Two vectors' cosine similarity measures the ANGLE between them, not
@@ -384,7 +560,7 @@ The constraint that causes the most production incidents
 
 **Production approach:** pick `text-embedding-3-small` (1536-dim) as the default — cheap, fast, strong general-purpose retrieval — and treat the model choice as a config value (`EMBEDDING_MODEL` in your `.env`), not a hardcoded string, so swapping it is a deliberate, tracked decision.
 
-**Enterprise approach:** support multiple embedding models behind a versioned index naming scheme (e.g. `devportal-kb-v2-3large`), so you can run an A/B comparison or migrate without downtime — Lesson 10 touches on why re-embedding the whole corpus on every doc change doesn't scale and what incremental indexing looks like instead.
+**Enterprise approach:** support multiple embedding models behind a versioned index naming scheme (e.g. `turab-industries-v2-3large`), so you can run an A/B comparison or migrate without downtime — Lesson 10 touches on why re-embedding the whole corpus on every doc change doesn't scale and what incremental indexing looks like instead.
 
 ### 🛠️ What To Build
 Nothing persisted yet — this lesson is a standalone script proving you understand what you're about to index: embed two semantically-similar sentences and two unrelated ones, print their pairwise cosine similarities, and confirm similar sentences score higher.
@@ -400,9 +576,9 @@ from langchain_openai import OpenAIEmbeddings
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 
 texts = [
-    "How do I roll back a failed deployment?",
-    "What's the process for reverting a broken release?",
-    "What's the on-call rotation schedule?",
+    "How many days notice do I need to give before resigning?",
+    "What is the minimum notice period if I want to quit my job?",
+    "What is the minimum order quantity for promotional merchandise?",
 ]
 vectors = embeddings.embed_documents(texts)
 
@@ -421,8 +597,9 @@ src/rag/ingestion/embedding_sanity_check.py that:
 1. Instantiates OpenAIEmbeddings using settings.EMBEDDING_MODEL from
    config.py.
 2. Embeds three sentences: two semantically similar (paraphrases of
-   each other) and one unrelated, all about the DevPortal domain
-   (deployments, on-call, auth — pick your own wording).
+   each other) and one unrelated, all about the Turab Industries
+   domain (HR policy, procurement, or the product catalog — pick your
+   own wording).
 3. Computes pairwise cosine similarity using numpy (no external
    similarity library) and prints all three pairwise scores with
    labels.
@@ -458,7 +635,7 @@ A vector index isn't "a database that happens to store vectors" — it's built a
 **Enterprise approach:** **namespaces** for hard tenant/environment isolation (e.g. one namespace per customer, or `staging` vs `prod`) — namespaces are a physical partition within the index, faster and more isolated than a metadata filter for that use case. Multiple indexes (or a `doc_version` metadata field plus filtering) when you need to run two embedding-model generations side by side during a migration.
 
 ### 📥 Assumed State
-Lessons 3–4's chunking and embedding both work in isolation.
+Lessons 2.5–4's ingestion (markdown + PDF), chunking, and embedding all work in isolation.
 
 ### 🛠️ What To Build
 `indexing/embed_and_index.py` — create the index if it doesn't exist (dimension from the embedding model, `metric="cosine"`, `ServerlessSpec`), then use `PineconeVectorStore.from_documents(chunks, embeddings, index_name=...)` to embed and upsert every chunk in one call — LangChain handles the batching for you.
@@ -520,7 +697,7 @@ src/rag/indexing/embed_and_index.py:
 ```
 
 ### ✅ Done When
-`uv run python -m rag.run_ingest` completes without error, and `describe_index_stats()` reports a vector count matching your chunk count from Lesson 3. Run it a second time immediately after — the count should stay the same, not double (proves the `ids=` idempotency).
+`uv run python -m rag.run_ingest` completes without error, and `describe_index_stats()` reports a vector count matching your chunk count from Lesson 3 (across all eight source docs — six markdown, two PDF). Run it a second time immediately after — the count should stay the same, not double (proves the `ids=` idempotency).
 
 ### 🔑 Concepts You Must Be Able to Explain
 Why index dimension must match the embedding model, and what happens (concretely, not vaguely) if it doesn't. Why using a deterministic ID instead of an auto-generated one is a production requirement, not a nicety. What a namespace is and when you'd reach for one instead of a metadata filter.
@@ -548,13 +725,13 @@ Retrieval is where most of your actual product quality lives, and it's the stage
 - **Production default:** retrieve a wider candidate set (`k=15–25`) and either filter it down with metadata, or rerank it down to `k=3–5` before generation (Lesson 10) — separating "cast a wide net" from "pick the best few" is a two-stage pattern, not a single `top_k` knob.
 
 **Metadata filtering — a retrieval lever, not an afterthought:**
-Pinecone lets you pass a `filter` dict alongside the vector query, evaluated *before or alongside* the ANN search rather than as a post-hoc Python filter on the results. This matters for three separate reasons: (1) **relevance** — a query about "on-call" shouldn't surface a `data` team migration doc even if it scores decently on pure semantic similarity; (2) **correctness at scale** — pre-filtering a large index by tenant/team is dramatically cheaper than retrieving 1000 candidates and filtering in application code; (3) **access control** — if a user should only see `platform`-team docs, filtering at the vector-search layer is the enforcement point, not a check you bolt on after the fact (and forget on one code path).
+Pinecone lets you pass a `filter` dict alongside the vector query, evaluated *before or alongside* the ANN search rather than as a post-hoc Python filter on the results. This matters for three separate reasons: (1) **relevance** — a query about HR leave policy shouldn't surface the sales-team product catalog even if it scores decently on pure semantic similarity; (2) **correctness at scale** — pre-filtering a large index by team/department is dramatically cheaper than retrieving 1000 candidates and filtering in application code; (3) **access control** — if a user should only see `sales`-team docs (a client-facing chatbot, say), filtering at the vector-search layer is the enforcement point, not a check you bolt on after the fact (and forget on one code path).
 
 **Beginner approach:** unfiltered `similarity_search(query, k=4)`. Fine for a single-corpus demo.
 
 **Production approach:** always pass an explicit filter (even an empty `{}`) so filtering is a conscious parameter of every query, not something added later under time pressure; expose `team`/`doc_type` filters as parameters your retrieval function accepts.
 
-**Enterprise approach:** filter-driven access control enforced server-side per authenticated user/tenant (never trust a client-supplied filter for security — derive it from the authenticated session), plus hybrid dense+sparse search (Lesson 6.5) for queries containing exact identifiers (error codes, endpoint names) that pure semantic search under-weights.
+**Enterprise approach:** filter-driven access control enforced server-side per authenticated user/tenant (never trust a client-supplied filter for security — derive it from the authenticated session), plus hybrid dense+sparse search (Lesson 6.5) for queries containing exact identifiers (SKU codes, PO numbers) that pure semantic search under-weights.
 
 ### 🛠️ What To Build
 `retrieval/retriever.py` — a function that takes a query string, an optional metadata filter dict, and `k`, and returns scored chunks.
@@ -598,14 +775,14 @@ Using langchain-pinecone, generate src/rag/retrieval/retriever.py:
    — builds a Pinecone filter dict from team/doc_type using $eq when
    provided, calls similarity_search_with_score, returns results.
 3. A __main__ demo (src/rag/run_retrieval_demo.py) that runs the same
-   query ("how do I roll back a deployment?") three times: no filter,
-   filter team="platform", filter team="security" — and prints each
-   result set's chunk sources and scores side by side so the filtering
-   effect is visible.
+   query ("what is the notice period for resigning?") three times: no
+   filter, filter team="hr", filter team="sales" — and prints each
+   result set's chunk sources and scores side by side so the
+   filtering effect is visible.
 ```
 
 ### ✅ Done When
-The demo script shows the unfiltered query returning the deploy-runbook chunk as the top hit, and the `team="security"` filtered query either returns zero platform-team results or none at all — proving the filter is actually constraining the search, not just re-ranking within the same result set.
+The demo script shows the unfiltered query returning `hr_policies.md`'s chunk as the top hit, and the `team="sales"` filtered query either returns zero relevant results or a clearly different (and clearly wrong-for-this-question) result set — proving the filter is actually constraining the search, not just re-ranking within the same result set.
 
 ### 🔑 Concepts You Must Be Able to Explain
 Why metadata filtering happens at the vector-search layer instead of as a post-hoc Python `if` on results. Why a raw cosine similarity score is not a calibrated confidence value. The two-stage "wide retrieval, then narrow" pattern and why it's different from just picking a smaller `k`.
@@ -627,11 +804,11 @@ Improve what goes *into* retrieval (query transformation) and understand the ret
 ### 🧠 Why This Matters
 Lesson 2 defined Advanced RAG as Naive RAG plus fixes at exactly two points: **pre-retrieval** and **post-retrieval**. This lesson is the pre-retrieval half. Lesson 10 is the post-retrieval half. Both exist because the same underlying problem shows up from two different directions: a user's terse, informally-worded question and a well-written document chunk don't share as much vocabulary as you'd hope, even when the chunk perfectly answers the question.
 
-**Query Expansion** *(Month 2 label: 🔴 — Lesson 6.3).* Generate 3–5 reformulations of the original query — different phrasings, different levels of specificity — search with all of them, and deduplicate the combined results before they reach the prompt. It directly attacks the vocabulary-gap problem by giving the retriever several different chances to match the document's actual wording, at the cost of extra embedding calls and retrieval round-trips. This course names the technique and explains the mechanism but doesn't implement it — the DevPortal corpus is small enough that single-query retrieval already performs well, and the real payoff of query expansion only shows up on larger, more heterogeneous corpora where a single phrasing genuinely misses relevant material. Month 2, Lesson 6.3 builds it for real.
+**Query Expansion** *(Month 2 label: 🔴 — Lesson 6.3).* Generate 3–5 reformulations of the original query — different phrasings, different levels of specificity — search with all of them, and deduplicate the combined results before they reach the prompt. It directly attacks the vocabulary-gap problem by giving the retriever several different chances to match the document's actual wording, at the cost of extra embedding calls and retrieval round-trips. This course names the technique and explains the mechanism but doesn't implement it — the Turab Industries corpus is small enough that single-query retrieval already performs well, and the real payoff of query expansion only shows up on larger, more heterogeneous corpora where a single phrasing genuinely misses relevant material. Month 2, Lesson 6.3 builds it for real.
 
 **HyDE — Hypothetical Document Embeddings** *(Month 2 label: 🔴 — Lesson 6.3).* Instead of embedding the user's raw question, ask the LLM to first draft a plausible, made-up *answer* to it — with no retrieval involved yet — then embed *that hypothetical answer* and use it as the search query. This sounds backwards until you see why it works: your indexed chunks are written in "document language" (declarative, detailed, answer-shaped), while a user's question is written in "question language" (short, interrogative, vague). A hypothetical answer is already in document language, even though it might be factually wrong — and it's the *style and vocabulary* match that improves retrieval, not the hypothetical's correctness. HyDE is cheap enough (one extra LLM call before embedding) that this course implements it as an optional mode on `retrieve()` below.
 
-**Hybrid Retrieval — dense + sparse (BM25) + Reciprocal Rank Fusion** *(Month 2 label: 🔴 — Lesson 5.3).* Dense (embedding) search is strong on paraphrase and synonym matching but weak on exact tokens — a chunk containing the literal string `RATE_LIMIT_EXCEEDED` or a ticket ID doesn't necessarily embed "close" to a query containing that same string, because embeddings capture meaning, not exact characters. **Sparse retrieval** (BM25 — term-frequency-weighted exact lexical matching, no embeddings involved) is the mirror image: it excels at exactly what dense search misses — error codes, product codes, proper nouns, domain jargon. Running both and merging the two ranked lists with **Reciprocal Rank Fusion** — `score = Σ 1 / (k + rank_i)`, with `k = 60` as the standard starting constant — gives you a single fused ranking that rewards a chunk for ranking well in *either* list, with no manually-tuned weights required to get a reasonable result. This course explains the mechanism and its expected gain (typically 5–15% recall improvement over dense alone, per Month 2's own figures) but doesn't implement it: hybrid search is an *index-level* decision, not a pure application-code addition like HyDE is — it needs a second sparse index (or a Pinecone index built with `metric="dotproduct"` supporting both `values` and `sparse_values`) reconfigured from the cosine-metric index Lesson 5 already built, plus a BM25 encoder library. Real, worthwhile infrastructure — genuinely disproportionate to a six-document corpus with no exact-match-sensitive content. Month 2, Lesson 5.3 builds it for real.
+**Hybrid Retrieval — dense + sparse (BM25) + Reciprocal Rank Fusion** *(Month 2 label: 🔴 — Lesson 5.3).* Dense (embedding) search is strong on paraphrase and synonym matching but weak on exact tokens — a chunk containing the literal string `TUR-PROC-014` (a purchase-order or SKU code) doesn't necessarily embed "close" to a query containing that same string, because embeddings capture meaning, not exact characters. **Sparse retrieval** (BM25 — term-frequency-weighted exact lexical matching, no embeddings involved) is the mirror image: it excels at exactly what dense search misses — SKU codes, PO numbers, proper nouns, domain jargon. Running both and merging the two ranked lists with **Reciprocal Rank Fusion** — `score = Σ 1 / (k + rank_i)`, with `k = 60` as the standard starting constant — gives you a single fused ranking that rewards a chunk for ranking well in *either* list, with no manually-tuned weights required to get a reasonable result. This course explains the mechanism and its expected gain (typically 5–15% recall improvement over dense alone, per Month 2's own figures) but doesn't implement it: hybrid search is an *index-level* decision, not a pure application-code addition like HyDE is — it needs a second sparse index (or a Pinecone index built with `metric="dotproduct"` supporting both `values` and `sparse_values`) reconfigured from the cosine-metric index Lesson 5 already built, plus a BM25 encoder library. Real, worthwhile infrastructure — genuinely disproportionate to an eight-document corpus with limited exact-match-sensitive content. Month 2, Lesson 5.3 builds it for real.
 
 ### 🛠️ What To Build
 Add a `hyde_query()` function and wire it into `retrieve()` as an optional `query_transform` parameter (defaulting to `"none"`, so nothing built in Lessons 7–8 has to change).
@@ -652,9 +829,10 @@ _hyde_llm = ChatOpenAI(model=settings.CHAT_MODEL, temperature=0.3)
 def hyde_query(question: str) -> str:
     response = _hyde_llm.invoke(
         f"Write a short, plausible-sounding paragraph that WOULD answer "
-        f"this question, as if it came from an internal developer-platform "
-        f"doc. It's fine if it's not fully accurate — write in the style "
-        f"of the docs, not as a hedge-everything answer.\n\nQuestion: {question}"
+        f"this question, as if it came from an internal Turab Industries "
+        f"policy document. It's fine if it's not fully accurate — write in "
+        f"the style of the docs, not as a hedge-everything answer.\n\n"
+        f"Question: {question}"
     )
     return response.content
 ```
@@ -674,10 +852,11 @@ from Lesson 6:
    behavior is identical to Lesson 6 — do not change the default
    behavior of any existing caller.
 3. A __main__ demo (src/rag/run_hyde_demo.py) that runs ONE short,
-   vague question (something like "what do I do if things break at
-   3am?") through retrieve() twice — once with query_transform="none",
-   once with "hyde" — and prints both result sets' top chunk and score
-   side by side so the difference is visible.
+   vague question (something like "what do I do if I need to travel
+   for a client meeting on short notice?") through retrieve() twice —
+   once with query_transform="none", once with "hyde" — and prints
+   both result sets' top chunk and score side by side so the
+   difference is visible.
 
 Do not modify answer_question() or the FastAPI routes from Lessons 7-8
 — query_transform stays an opt-in parameter with a safe default.
@@ -707,7 +886,7 @@ Turn retrieved chunks into a grounded answer: build the augmented prompt and wir
 "Augmentation" sounds like it should be complicated. Mechanically, it's string concatenation: system instructions + formatted retrieved chunks + the user's question. What separates a naive concatenation from a production-grade one is four specific decisions, each with a real failure mode if you skip it:
 
 1. **Grounding instructions.** Explicitly tell the model to answer *only* from the provided context and to say so if the context doesn't contain the answer. Skip this and the model will silently blend retrieved context with its own parametric knowledge — which is exactly the hallucination-under-a-confident-tone failure mode that makes RAG bugs hard to catch by eye.
-2. **Source attribution scaffolding.** Number or label each retrieved chunk (`[Source 1: deploy.md]`) so the model can cite which source backs which claim, and so you can show citations to the user — turning "trust the answer" into "verify the answer" is a real production requirement, not a nice-to-have.
+2. **Source attribution scaffolding.** Number or label each retrieved chunk (`[Source 1: hr_policies.md]`) so the model can cite which source backs which claim, and so you can show citations to the user — turning "trust the answer" into "verify the answer" is a real production requirement, not a nice-to-have.
 3. **Context ordering.** Put the most relevant chunk closest to the question, not first in an arbitrary list — long-context models measurably under-attend to information buried in the middle of a long prompt (the "lost in the middle" effect, covered fully in Lesson 10). For a handful of short chunks this barely matters; it matters a lot once you're stuffing 15+ chunks in.
 4. **Token budget.** Retrieved context + system prompt + question must fit inside the model's context window with room left for the answer. At small `k` this is rarely the constraint — it becomes one the moment you widen retrieval (Lesson 6's "wide net" pattern) without a reranking step to narrow back down before generation.
 
@@ -731,10 +910,11 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 
-SYSTEM_PROMPT = """You are an internal developer-platform assistant.
-Answer ONLY using the numbered sources below. If the sources don't
-contain the answer, say "I don't have that in the knowledge base"
-instead of guessing. Cite sources inline like [1], [2]."""
+SYSTEM_PROMPT = """You are an internal HR & operations assistant for
+Turab Industries employees. Answer ONLY using the numbered sources
+below. If the sources don't contain the answer, say "I don't have
+that in the knowledge base" instead of guessing. Cite sources inline
+like [1], [2]."""
 
 prompt = ChatPromptTemplate.from_messages([
     ("system", SYSTEM_PROMPT),
@@ -755,8 +935,9 @@ generation_chain = prompt | llm | StrOutputParser()
 ```text
 Using langchain-core and langchain-openai, generate:
 1. src/rag/generation/prompt.py — SYSTEM_PROMPT (grounding instruction
-   as shown above, adapted for a DevPortal assistant persona) and a
-   ChatPromptTemplate with a "context" and "question" input variable.
+   as shown above, adapted for a Turab Industries assistant persona)
+   and a ChatPromptTemplate with a "context" and "question" input
+   variable.
 2. src/rag/generation/chain.py:
    - format_docs(scored_docs: list[tuple[Document, float]]) -> str,
      numbering each source and labeling it with its metadata "source"
@@ -770,8 +951,13 @@ Using langchain-core and langchain-openai, generate:
       "raw_chunks": scored_docs} so the caller can inspect what was
      retrieved, not just the final text.
 3. A __main__ demo asking three questions: one clearly answerable from
-   the docs, one clearly NOT in the docs (to verify the model refuses
-   instead of guessing), and one that spans two source documents.
+   the docs (e.g. "How many earned leave days do I accrue per
+   month?"), one clearly NOT in the docs (e.g. "What was Turab
+   Industries' revenue last year?" — to verify the model refuses
+   instead of guessing), and one that spans two source documents
+   (e.g. "If I'm still on probation, what's my notice period, and do
+   I have health insurance yet?" — spans hr_policies.md and
+   employee_benefits_leave.md).
 ```
 
 ### ✅ Done When
@@ -802,14 +988,14 @@ uv add "fastapi[standard]"
 
 ### 🛠️ What To Build
 `api/main.py` with two endpoints:
-- `POST /ingest` — re-runs the Lesson 3→5 pipeline (load → chunk → embed → index) on demand. In a real system this would be triggered by a doc-change webhook, not called synchronously per-request — flagged below.
+- `POST /ingest` — re-runs the Lesson 2.5→5 pipeline (load → chunk → embed → index) on demand. In a real system this would be triggered by a doc-change webhook, not called synchronously per-request — flagged below.
 - `POST /query` — takes `{question, k?, team?, doc_type?}`, runs Lesson 6→7's retrieve-then-generate chain, returns `{answer, sources}`.
 
 ### 💡 Core Pattern
 ```python
 # The point of this snippet: the route handler has almost no logic of
 # its own — it validates input shape and delegates. That's the signal
-# you got the layering right in Lessons 3-7.
+# you got the layering right in Lessons 2.5-7.
 from fastapi import FastAPI
 from pydantic import BaseModel
 
@@ -819,7 +1005,7 @@ from rag.ingestion.chunker import chunk_documents
 from rag.ingestion.loader import load_documents
 from rag.retrieval.retriever import get_vector_store
 
-app = FastAPI(title="DevPortal RAG API")
+app = FastAPI(title="Turab Industries RAG API")
 vector_store = get_vector_store()
 
 class QueryRequest(BaseModel):
@@ -853,18 +1039,19 @@ from Lesson 7's chain.py; returns answer + sources only, not
 raw_chunks — keep the wire response lean). Instantiate the vector
 store connection ONCE at module load, not per-request. Add a GET
 /health returning {"status": "ok"}. Do not add authentication, rate
-limiting, request logging middleware, CORS config, or Lesson 6.5's
-query_transform parameter — explicitly out of scope for this lesson.
+limiting, request logging middleware, CORS config, file upload
+handling (Tier 2/3 from Lesson 2.5), or Lesson 6.5's query_transform
+parameter — explicitly out of scope for this lesson.
 ```
 
 ### ✅ Done When
-`uv run fastapi dev src/rag/api/main.py`, then `POST /ingest` returns a chunk count, and `POST /query` with `{"question": "how do I roll back a deployment?"}` returns a grounded answer citing `deploy.md`.
+`uv run fastapi dev src/rag/api/main.py`, then `POST /ingest` returns a chunk count, and `POST /query` with `{"question": "how many earned leave days do I get per year?"}` returns a grounded answer citing `employee_benefits_leave.md`.
 
 ### 🔑 Concepts You Must Be Able to Explain
 Why the vector store connection is instantiated once at startup, not per-request (connection overhead, and Pinecone's client is safe to reuse across requests). Why `/ingest` as a synchronous request/response endpoint is a demo simplification — for any real corpus, ingestion is a background job (queue-triggered or scheduled), because embedding hundreds of documents inside an HTTP request timeout window doesn't scale and blocks the caller for no reason.
 
 ### ⏭️ Deferred (Production Extension)
-Auth, rate limiting, async background ingestion (Celery/RQ/a queue), request logging and tracing, streaming `/query` responses (server-sent events), CORS, exposing Lesson 6.5's `query_transform` as an API parameter — all standard FastAPI production concerns (or a deliberately deferred feature flag), none specific to RAG mechanics, all skipped here to keep the lesson about the pipeline, not the framework.
+Auth, rate limiting, async background ingestion (Celery/RQ/a queue), request logging and tracing, streaming `/query` responses (server-sent events), CORS, a real file-upload endpoint with Tier 2/3 validation (Lesson 2.5), exposing Lesson 6.5's `query_transform` as an API parameter — all standard FastAPI production concerns (or a deliberately deferred feature flag), none specific to RAG mechanics, all skipped here to keep the lesson about the pipeline, not the framework.
 
 ### ⏱️ ~20 minutes
 
@@ -917,7 +1104,7 @@ uv add ragas
 ```
 
 ### 🛠️ What To Build
-- `evaluation/eval_dataset.py` — 6–8 hand-written `{question, ground_truth}` pairs against your DevPortal docs (e.g. "What's the on-call escalation path?" with a known-correct answer you wrote by reading `on_call.md` yourself).
+- `evaluation/eval_dataset.py` — 6–8 hand-written `{question, ground_truth}` pairs against your Turab Industries docs (e.g. "What is Turab Industries' standard payment term for new corporate clients?" with a known-correct answer you wrote by reading `product_catalog_faq.md` yourself), spanning both the six markdown docs and the two PDFs.
 - `evaluation/run_eval.py` — runs each question through your full retrieve → generate pipeline, assembles a Ragas `EvaluationDataset`, and runs `evaluate()` with the four metrics above.
 
 ### 💡 Core Pattern
@@ -953,8 +1140,9 @@ print(results)
 Using ragas, generate:
 1. src/rag/evaluation/eval_dataset.py — a list of 6-8 dicts with
    "question" and "ground_truth" keys, each answerable from exactly
-   one of the six DevPortal docs (write the ground_truth yourself by
-   reading the doc; don't invent facts not present in it).
+   one of your eight Turab Industries source docs (six markdown, two
+   PDF) — write the ground_truth yourself by reading the doc; don't
+   invent facts not present in it.
 2. src/rag/evaluation/run_eval.py — build_eval_dataset() as shown
    above (reusing answer_question from Lesson 7, NOT reimplementing
    retrieval/generation), then evaluate() with ContextPrecision,
@@ -1037,9 +1225,12 @@ Consolidate what you built into language you can defend in a design review or in
 
 ### 🧠 Full System Recap
 ```text
-data/docs/*.md          → source of truth, never embedded directly
-Document (loader.py)     → doc-level metadata attached
+data/docs/*.{md,pdf}     → source of truth, never embedded directly
+Document (loader.py)     → doc-level metadata attached (per-page for
+                             PDFs, per-file for markdown, Lesson 2.5)
 Chunk (chunker.py)       → retrievable unit, metadata inherited
+  (+ parent_child_demo.py's standalone comparison, Lesson 3 — not
+   wired into the indexed path)
 Embedding (OpenAIEmbeddings) → chunk meaning as a vector
 Pinecone index            → ANN-searchable vector storage, dimension
                              locked to your embedding model
@@ -1066,7 +1257,8 @@ What would still be missing to call it **Agentic RAG**: the LLM itself would nee
 | | Naive RAG | Production RAG (this course) | Enterprise RAG |
 |---|---|---|---|
 | RAG pattern (Month 2 label) | Naive RAG 🔴 | Advanced RAG 🔴 | Agentic RAG 🔴 / GraphRAG 🟡 |
-| Chunking | Fixed character count | Recursive, structure-aware | Semantic/parent-child/layout-aware, size auto-tuned against eval |
+| Chunking | Fixed character count | Recursive, structure-aware (+ Parent-Child compared standalone, Lesson 3) | Semantic/parent-child wired into production/layout-aware, size auto-tuned against eval |
+| Ingestion formats | Single format | Markdown + PDF (Tier 1, Lesson 2.5) | Any format, client-uploaded, validated (Tier 2/3) |
 | Retrieval | Single-stage top-k | Wide retrieval + metadata filter + optional HyDE | + hybrid dense/sparse + query expansion |
 | Post-retrieval | None | Cross-encoder reranking | + corrective retry loop, adaptive routing |
 | Access control | None | Caller-supplied filter (demo-safe only) | Session-derived, server-enforced filter |
@@ -1084,10 +1276,12 @@ None of the rows are "wrong" in isolation — naive RAG is the right choice for 
 | Agentic RAG / query routing | 🔴 — Lesson 5.1, 6.2, 6.4 | Needs multiple retrievers or tools and a decision layer — that's the domain of the graph/agent frameworks, not RAG mechanics itself | LangGraph — combine this course's `retrieve()`/`answer_question()` as tools inside a graph node, and reuse your **memory crash course**'s checkpointing/summarization for multi-turn conversations grounded in this index |
 | Query expansion (multi-query + dedup) | 🔴 — Lesson 6.3 | Genuinely useful; explained conceptually in Lesson 6.5, cut from implementation to protect the time budget once HyDE was covered | One `RunnableParallel` branch ahead of `retrieve()`: generate 3-5 reformulations, retrieve each, deduplicate |
 | Hybrid dense+sparse search | 🔴 — Lesson 5.3 | This course's corpus doesn't have exact-match-sensitive content to justify the index-level rework; explained in full in Lesson 6.5 | Pinecone sparse-dense indexes, `metric="dotproduct"`, a BM25 sparse encoder, merged with RRF |
+| Parent-child chunking wired into production retrieval | 🔴 — Lesson 5.2 | Lesson 3 builds and compares it standalone; wiring it in as the real indexing/retrieval path needs a docstore and child→parent lookup logic this course keeps out of the main pipeline | Month 2, Lesson 5.2's `ParentDocumentRetriever` build |
 | Modular RAG | 🟡 — Lesson 5.1 | Only pays off once a team is benchmarking retriever/reranker/generator swaps independently — premature for a single-corpus course | Treat each of this course's stages as a swappable interface once you have 2+ real options to A/B for any one of them |
 | GraphRAG | 🟡 — Lesson 5.1 | A meaningfully different retrieval paradigm (graph traversal, not vector similarity), not a small extension | Worth a dedicated deep-dive once relationship-style queries — not just topical ones — are a real, measured part of your query distribution |
 | Corrective / Adaptive RAG | 🔴 / 🔴 — Lesson 6.3 | Needs a graph that can loop (retrieve → grade → retry) and a query-complexity classifier upstream of retrieval — both out of scope here | Month 2, Lesson 6.2 (LangGraph cycles) then 6.3, directly building on this course's `retrieve()` and `rerank()` as the nodes being routed between |
 | Production API concerns (auth, rate limiting, streaming, background ingestion) | — | Standard FastAPI concerns, not RAG-specific | Any FastAPI production guide — nothing here changes based on RAG |
+| Tier 2/3 file uploads (endpoint, validation, security, OCR) | — | General backend/security engineering, not RAG-specific (Lesson 2.5 names this boundary explicitly) | Add a FastAPI upload route to Lesson 8's API, then layer in MIME-sniffing, size limits, and OCR as separate, deliberate additions |
 | CI-gated evaluation, production monitoring of retrieval/faithfulness drift | 🟡 — Lesson 7.x | Needs a deployed system with real traffic to be meaningful | Wire Lesson 9's `run_eval.py` into your CI pipeline as a first step |
 
 ### ⏱️ ~15 minutes
@@ -1096,4 +1290,4 @@ None of the rows are "wrong" in isolation — naive RAG is the right choice for 
 
 ## Appendix — What This Crash Course Never Builds (By Design)
 
-Authentication, a persistent application database, multi-tenant namespace isolation, streaming responses, background job infrastructure, CI/CD, Kubernetes, agentic query routing, LangGraph orchestration, knowledge graphs, hybrid dense+sparse indexing infrastructure, fine-tuned embedding models, and a frontend. All legitimate production concerns — none of them RAG mechanics, which is the entire scope of this course.
+Authentication, a persistent application database, multi-tenant namespace isolation, streaming responses, background job infrastructure, CI/CD, Kubernetes, agentic query routing, LangGraph orchestration, knowledge graphs, hybrid dense+sparse indexing infrastructure, fine-tuned embedding models, a frontend, arbitrary client-side file uploads with backend validation/security (Tier 2/3 — Lesson 2.5's PDF handling is Tier 1 only: known, pre-created files loaded like any other seed doc), and OCR for scanned documents. All legitimate production concerns — none of them RAG mechanics, which is the entire scope of this course.
