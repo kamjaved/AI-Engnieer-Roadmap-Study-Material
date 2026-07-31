@@ -8,3 +8,9 @@ uv.lock.bak
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# Auto-generated packaging metadata — created by `uv run` (or pip/
+# setuptools) whenever your src/-layout package gets installed in
+# editable mode. Pure build output, regenerated every time; never
+# hand-edited, never needed in version control.
+*.egg-info/
