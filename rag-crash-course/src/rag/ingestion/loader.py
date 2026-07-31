@@ -2,7 +2,6 @@
 
 Lesson 3 fills in load_documents() itself — for now this file only
 stubs the metadata lookup table that load_documents() will use.
-Lesson 2.5 adds two more entries here (the PDFs) once you reach it.
 """
 
 from __future__ import annotations
@@ -19,9 +18,11 @@ DOC_METADATA: dict[str, dict[str, str]] = {
     "procurement_guidelines.md": {"team": "operations", "doc_type": "guide"},
     "product_catalog_faq.md": {"team": "sales", "doc_type": "faq"},
     "product_catalog_services_guide.md": {"team": "sales", "doc_type": "guide"},
-    # Lesson 2.5 adds two more entries here once the PDFs are ready —
-    # not added yet, since PyPDFLoader dispatch logic doesn't exist
-    # until that lesson:
-    #   "corporate_gifts_price_list.pdf": {"team": "sales", "doc_type": "catalog"},
-    #   "company_overview.pdf": {"team": "leadership", "doc_type": "guide"},
+    # Added ahead of Lesson 2.5 (Kamran had both PDFs ready already) —
+    # the DICT entries are correct and ready to use. What's still
+    # missing is Lesson 2.5's actual load_documents() dispatch logic
+    # (the PyPDFLoader code path) — these two keys just sit unused
+    # until that lesson wires up the .pdf branch.
+    "corporate_gifts_price_list.pdf": {"team": "sales", "doc_type": "catalog"},
+    "company_overview.pdf": {"team": "leadership", "doc_type": "guide"},
 }
