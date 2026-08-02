@@ -120,3 +120,37 @@
 **Common mistake:** Treating parent-child chunking as a guaranteed fix for context loss — it's a probability improvement, still blind to actual document structure.
 
 ---
+
+## Lesson 4 — Embeddings: The Vector Space Mental Model
+
+### Q1. Why is it non-negotiable that the same embedding model be used at index-time and query-time — and why does getting this wrong fail silently instead of throwing an error?
+
+**Answer:** Each embedding model produces vectors in its own private geometric space — the same text embedded by two different models lands in different coordinates, so comparing vectors from different models is meaningless. This fails silently because vector databases only store arrays of numbers; they don't know or validate which model produced them. If the two models output different dimensions, the similarity math throws a hard shape-mismatch error. But if two different models happen to share a dimension, cosine similarity still returns a normal-looking number — the failure is semantic, not syntactic, so nothing crashes and retrieval quality just quietly gets worse.
+
+**Key points:**
+- An embedding model = a fixed, private vector-space geometry — not interchangeable with another model's
+- Vector DBs (Pinecone, FAISS, etc.) store plain number arrays with no awareness of which model made them
+- Different dimensions (3072 vs 1536 ) → hard crash (shape mismatch in the similarity math) 
+e.g., text-embedding-3-large = 3072 numbers vs. text-embedding-3-small = 1536 numbers) → this actually does throw a hard, loud error. Your cosine_sim function would crash on the dot product — numpy can't multiply arrays of mismatched shape. You'd catch this in five seconds.
+
+- Same dimensions, different model → silent failure — the math runs, the result is meaningless
+- Changing `EMBEDDING_MODEL` requires a full re-index of every existing vector, not just a config edit
+
+**Common mistake:** Assuming a config change to the embedding model is safe without re-indexing — old vectors silently become incompatible with new queries, and nothing errors to warn you.
+
+---
+
+### Q2. Why is cosine similarity specifically the right default for comparing text embeddings, rather than Euclidean distance?
+
+**Answer:** Cosine similarity measures the angle between two vectors and ignores their length (magnitude). For text embeddings, direction encodes meaning, while magnitude often varies for reasons unrelated to meaning, like sentence length. Euclidean distance is sensitive to magnitude, so that noise can throw it off. OpenAI's embedding vectors happen to already be normalized to unit length, so for them cosine similarity and Euclidean distance are mathematically equivalent. Cosine remains the safer default anyway, because it stays correct even for embedding models that don't guarantee that normalization.
+
+**Key points:**
+- Cosine similarity = angle between two vectors; ignores magnitude/length entirely
+- Direction encodes meaning; magnitude is often just noise (sentence length, tokenization quirks)
+- Euclidean distance is sensitive to magnitude, so it can be misled by that noise
+- OpenAI embeddings are pre-normalized to unit length — cosine and Euclidean give equivalent rankings for them specifically
+- Cosine is still the safer default choice, since it doesn't depend on every embedding model guaranteeing normalization
+
+**Common mistake:** Assuming cosine and Euclidean always rank results differently — for normalized vectors they don't; the real reason to default to cosine is not having to rely on that guarantee holding for every model.
+
+---

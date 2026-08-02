@@ -70,21 +70,34 @@
 
 ---
 
-## Lesson 4 — Embeddings: The Vector Space Mental Model — 🔄 IN PROGRESS
+## Lesson 4 — Embeddings: The Vector Space Mental Model — ✅ COMPLETE
 
-- [ ] 4.1 Dependency installed: `uv add numpy` (new for this lesson — not part of Lesson 1's original dependency set)
-- [ ] 4.2 `ingestion/embedding_sanity_check.py` written — instantiates `OpenAIEmbeddings(model=settings.EMBEDDING_MODEL)`, reusing the `EMBEDDING_MODEL` value already defined in `config.py` since Lesson 1
-- [ ] 4.3 Three sentences defined — two semantically similar paraphrases of each other (Turab Industries domain: HR, procurement, or product catalog — Kamran's own wording, not copied from the roadmap's example) plus one unrelated third sentence from the same domain
-- [ ] 4.4 `cosine_sim(a, b)` helper written using `numpy` (dot product over the product of the two vectors' norms) — no external similarity library
-- [ ] 4.5 All three pairwise similarity scores computed and printed with labels — the similar-pair score, and each similar sentence's score against the unrelated one
-- [ ] 4.6 Plain `assert` added (not a test framework) confirming the two similar sentences score higher against each other than either does against the unrelated sentence, with a printed message
-- [ ] 4.7 Done-When check: script runs cleanly, prints all three similarity scores, and the assertion passes
-- [ ] 4.8 Concept check answered: why embedding model consistency between index-time and query-time is non-negotiable, and why that failure mode is silent rather than a raised error; why cosine similarity specifically (not Euclidean distance) is the right default for text embeddings
+- [x] 4.1 Dependency installed: `uv add numpy` (new for this lesson — not part of Lesson 1's original dependency set)
+- [x] 4.2 `ingestion/embedding_sanity_check.py` written — instantiates `OpenAIEmbeddings(model=settings.EMBEDDING_MODEL)`, reusing the `EMBEDDING_MODEL` value already defined in `config.py` since Lesson 1
+- [x] 4.3 Three sentences defined — two semantically similar paraphrases of each other (Turab Industries domain: HR, procurement, or product catalog — Kamran's own wording, not copied from the roadmap's example) plus one unrelated third sentence from the same domain
+- [x] 4.4 `cosine_sim(a, b)` helper written using `numpy` (dot product over the product of the two vectors' norms) — no external similarity library
+- [x] 4.5 All three pairwise similarity scores computed and printed with labels — the similar-pair score, and each similar sentence's score against the unrelated one
+- [x] 4.6 Plain `assert` added (not a test framework) confirming the two similar sentences score higher against each other than either does against the unrelated sentence, with a printed message
+- [x] 4.7 Done-When check: script runs cleanly, prints all three similarity scores, and the assertion passes
+- [x] 4.8 Concept check answered: why embedding model consistency between index-time and query-time is non-negotiable, and why that failure mode is silent rather than a raised error; why cosine similarity specifically (not Euclidean distance) is the right default for text embeddings
 
 **Note (added 2026-08-02):** standalone script, ~15 minutes per the roadmap — nothing gets persisted or wired into the real pipeline yet. This is prerequisite mental-model knowledge for indexing (Lesson 5) and retrieval (Lesson 6), not a pipeline stage of its own.
 
-## Lesson 5 — Vector Store & Indexing (the write path) — ⏳ NOT STARTED
-*(granular checklist added when this lesson starts)*
+**Note (added 2026-08-02) — closure:** 4.3's sentence pair (HR notice-period policy, paraphrased) produced a real, unpredicted finding: the two "unrelated" comparisons weren't equal (0.5645 vs. 0.4183) even though both are equally off-topic from the similar pair — flagged as an observation about embeddings picking up on structural/numeric phrasing similarity, not just topic, and fed directly into 4.8's discussion. 4.8's concept check was right on the core mechanism for both questions on the first attempt, but needed one sharpening each, not a correction: Q1 needed the distinction between a **dimension mismatch** (different vector sizes → hard crash in the similarity math) and a **same-dimension, different-model mismatch** (the truly silent failure — math runs, result is meaningless), tied back to why changing `EMBEDDING_MODEL` requires a full re-index, not just a config edit. Q2 needed the practical note that OpenAI's embeddings are already unit-normalized, so cosine similarity and Euclidean distance are mathematically equivalent for them specifically (`Euclidean² = 2 − 2×cosine`) — cosine remains the safer default because it doesn't depend on that guarantee holding for every model. Both additions reviewed and confirmed by Kamran before the lesson was marked complete. Full writeup in `lesson-notes.md`; final Q&A in `docs/Interview_QA.md`.
+
+---
+
+## Lesson 5 — Vector Store & Indexing (the write path) — 🔄 IN PROGRESS
+
+- [ ] 5.1 `indexing/embed_and_index.py` created — `EMBEDDING_DIMENSIONS` dict defined (`{"text-embedding-3-small": 1536, "text-embedding-3-large": 3072}`), keyed by model name so index dimension is always derived, never hardcoded
+- [ ] 5.2 `get_or_create_index(pc: Pinecone) -> None` written — checks `pc.has_index(settings.PINECONE_INDEX_NAME)` first (idempotent — safe to call on every run), creates a serverless index only if missing, with `dimension` looked up from `EMBEDDING_DIMENSIONS[settings.EMBEDDING_MODEL]`, `metric="cosine"`, `spec=ServerlessSpec(cloud="aws", region="us-east-1")`
+- [ ] 5.3 `index_chunks(chunks: list[Document]) -> PineconeVectorStore` written — builds `OpenAIEmbeddings(model=settings.EMBEDDING_MODEL)`, calls `PineconeVectorStore.from_documents(documents=chunks, embedding=embeddings, index_name=settings.PINECONE_INDEX_NAME, ids=[c.metadata["chunk_id"] for c in chunks])` — explicit `ids=` from the deterministic `chunk_id` (from Lesson 3) is what makes re-ingestion overwrite instead of duplicate
+- [ ] 5.4 `run_ingest.py` entrypoint written — chains `load_documents()` → `chunk_documents()` → `index_chunks()`, then prints the resulting vector count via `pc.Index(name).describe_index_stats()`. **Open decision to make when we get here:** the roadmap suggests `src/rag/run_ingest.py`, but Lesson 3 established the convention of keeping dev entry-point scripts at the project root (`run_ingest_preview.py`) — worth deciding explicitly whether this one counts as "library" (it's the real production ingestion path, not a throwaway preview) or "entry point," rather than defaulting silently either way
+- [ ] 5.5 Done-When check #1: `uv run python -m rag.run_ingest` (or equivalent, depending on 5.4's placement) completes with no errors, and `describe_index_stats()` reports a vector count matching Lesson 3's chunk count (57 chunks, from 9 loaded `Document` objects / 8 source files)
+- [ ] 5.6 Done-When check #2 (idempotency): run the same ingestion a second time immediately after — vector count must stay the same, not double, proving the `ids=` deterministic-ID strategy actually works as intended
+- [ ] 5.7 Concept check answered: why index dimension must exactly match the embedding model's output size, and what concretely happens if it doesn't; why a deterministic vector ID is a production requirement and not just a nicety; what a Pinecone namespace is and when you'd reach for one instead of a metadata filter
+
+**Note (added 2026-08-02):** `pinecone` and `langchain-pinecone` are already installed — both were part of Lesson 1's original `uv add` list, so there's no new-dependency item this lesson (unlike Lesson 2.5's `pypdf` or Lesson 4's `numpy`). This lesson is the pipeline's **write path** — Lesson 6 (the **read path**) depends on the metadata this lesson upserts, since Lesson 6's filtering can't work on metadata that was never indexed.
 
 ## Lesson 6 — Retrieval & Metadata Filtering (the read path) — ⏳ NOT STARTED
 *(granular checklist added when this lesson starts)*

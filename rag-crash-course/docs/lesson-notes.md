@@ -192,3 +192,44 @@ uv run python -m rag.ingestion.parent_child_demo
   - Full final Q&A (question, corrected reference answer, key points) captured separately in `docs/Interview_QA.md`.
 
 ---
+
+## Lesson 4 — Embeddings: The Vector Space Mental Model
+
+### Key concepts learned
+- **An embedding model defines a fixed, private coordinate system.** The vector space one model produces has nothing to do with the vector space a different model produces — "similar direction" only means anything when both vectors came from the same model. This is the mental model underneath why index-time and query-time embedding must always match.
+- **Two different failure shapes hide behind "model mismatch," not one.** A dimension mismatch (e.g. 3072-dim vs. 1536-dim vectors) throws a hard, loud error — `numpy` can't do a dot product on mismatched shapes, so `cosine_sim` crashes immediately. A same-dimension, different-model mismatch is the dangerous one: the math runs fine, `cosine_sim` returns a normal-looking float, nothing crashes — but the number is meaningless, because the two spaces were never the same to begin with. This distinction came up correcting 4.8 Q1 and is the real reason "just swap `EMBEDDING_MODEL` in `.env`" is not a safe, isolated config change — it silently invalidates every vector already in the index until a full re-index happens.
+- **Cosine similarity measures angle, not length.** The formula (`a·b / (‖a‖‖b‖)`) is a dot product (direction + magnitude combined) divided by both vectors' magnitudes — dividing out the magnitude is what leaves pure direction behind. For text, direction encodes meaning; magnitude often reflects incidental factors like sentence length, not meaning, so ignoring it is the point, not a limitation.
+- **OpenAI's embedding vectors are already unit-normalized**, which means for OpenAI specifically, cosine similarity and Euclidean distance are mathematically equivalent (`Euclidean² = 2 − 2×cosine`, when both vectors have length 1). Cosine is still the right *default* to reach for in code, though, because it stays correct even if you ever plug in a model that doesn't guarantee normalization — you shouldn't have to know or trust that detail about every embedding provider.
+- **`OpenAIEmbeddings.embed_documents([...])` batches one API call instead of N separate `.embed_query()` calls.** The query/document method split exists in LangChain's interface because some providers use asymmetric embeddings (a question gets embedded differently than the documents it's matched against) — OpenAI doesn't do that, but comparing three plain statements (not "a query against documents") made `embed_documents()` the natural fit anyway.
+- **`assert` is a dev-time sanity tool, not a production guard.** Running Python with the `-O` flag strips every `assert` statement silently — no error, they just don't execute. Fine for a one-off exploratory script like this one; never acceptable for real business-logic or security checks, where an explicit raised exception is required instead.
+
+### Important decisions & why
+- **Passed `api_key=settings.OPENAI_API_KEY` explicitly to `OpenAIEmbeddings`, instead of relying on it reading `OPENAI_API_KEY` from `os.environ` on its own.** `config.py`'s `pydantic-settings` (`SettingsConfigDict(env_file=".env")`) loads `.env` values into the typed `Settings` object — it does not also inject them into `os.environ`. Passing the key from `settings` explicitly keeps this script consistent with Lesson 1's whole point: one validated, typed source of truth, not scattered/implicit env lookups.
+- **Wrote `cosine_sim()` by hand with raw `numpy`, not `sklearn.metrics.pairwise.cosine_similarity` or `scipy.spatial.distance.cosine`.** The point of this lesson is understanding the math, not calling a library function — reaching for the library version later, once the mental model is solid, is normal and expected.
+- **Sentence pair topic: HR notice-period policy (paraphrased) vs. HR probation policy (unrelated).** Chosen in Kamran's own wording, not the roadmap's example, specifically restructured (not just synonym-swapped) so the test genuinely exercises paraphrase understanding rather than trivial word overlap.
+
+### Bugs hit and fixes
+None this lesson — the script ran cleanly on the first attempt, no errors, `assert` passed immediately. The one genuinely interesting thing in the output — the two "unrelated" pairs scoring differently from each other (0.5645 vs. 0.4183) — wasn't a bug, just a real observation about what the embedding model actually picks up on (shared numeric/structural phrasing, not just topic); captured under Key concepts, not here.
+
+### Commands used
+```bash
+uv add numpy
+uv run python -m rag.ingestion.embedding_sanity_check
+```
+
+### Self-check / confirmation results
+- **Done-When check (4.7)**: `uv run python -m rag.ingestion.embedding_sanity_check` ran cleanly and printed:
+  ```
+  Similar pair   (sentence 1 vs sentence 3): 0.7934
+  Unrelated pair (sentence 1 vs sentence 2): 0.5645
+  Unrelated pair (sentence 3 vs sentence 2): 0.4183
+  Sanity check PASSED: similar sentences scored higher than unrelated ones.
+  ```
+  Confirmed via pasted terminal output — similar pair scored clearly higher than both unrelated pairs, and the `assert` passed.
+- **Concept check (4.8)** — two questions, both correct on the core mechanism on the first attempt, each needing one sharpening (not a correction):
+  - *Q1 (why index-time/query-time model consistency is non-negotiable, and why the failure is silent)*: Kamran's answer correctly identified model-specific vector geometry, vector DBs being model-agnostic storage, and the failure being semantic rather than syntactic. Sharpened by adding the explicit split between a **dimension mismatch** (hard crash) and a **same-dimension, different-model mismatch** (the actual silent-failure case), and tied it to the real-world consequence: changing `EMBEDDING_MODEL` requires a full re-index, not just a `.env` edit.
+  - *Q2 (why cosine similarity over Euclidean distance)*: Kamran's answer correctly identified that cosine ignores magnitude and magnitude is often noise (sentence length, tokenization). Sharpened by adding that OpenAI's vectors are already unit-normalized, so cosine and Euclidean are mathematically equivalent for OpenAI specifically — and that cosine remains the safer default because it doesn't depend on that normalization guarantee holding for every possible embedding model.
+  - Both sharpenings reviewed and explicitly confirmed by Kamran before 4.8 — and the full lesson — was marked done.
+  - Full final Q&A (question, reference answer, key points) captured separately in `docs/Interview_QA.md`.
+
+---
