@@ -57,3 +57,66 @@
 **Common mistake:** Treating "we check the file extension" as sufficient upload security — extensions are trivially spoofable; real validation checks the file's actual bytes/content.
 
 ---
+
+## Lesson 3 — Documents → Chunks
+
+### Q1. Why is `chunk_size` something you have to tune per-corpus, not a fixed "correct" number? What goes wrong if it's too small, and what goes wrong if it's too big?
+
+**Answer:** Chunk size balances two competing needs. Smaller chunks give retrieval a sharper, more specific embedding — better precision — but risk cutting a complete idea across a boundary, losing meaning. Larger chunks give generation more surrounding context, but dilute the embedding (mixing multiple ideas into one vector) and can bury the real answer in irrelevant text, wasting tokens and risking the "lost in the middle" effect. There's no universal correct size — it depends on how self-contained a single idea is in your content, tuned empirically against real queries, not guessed from document length.
+
+**Key points:**
+- Small chunks → precise, focused embeddings → sharper retrieval matches
+- Small chunks risk cutting a complete idea in half, losing meaning
+- Large chunks → more context for generation, but dilute the embedding by averaging multiple ideas
+- Large chunks waste prompt budget and risk the "lost in the middle" effect
+- Tune based on content structure/density, not raw document length
+- Validate empirically against real queries — don't guess once and stop
+
+**Common mistake:** Assuming "bigger chunks are always better for generation." Oversized chunks hurt both retrieval precision and generation quality, not just retrieval.
+
+---
+
+### Q2. Why does metadata (`source`/`team`/`doc_type`) have to be attached to a `Document` before it gets split into chunks, rather than after? What would break if you tried to attach it after chunking instead?
+
+**Answer:** LangChain's text splitters copy a parent `Document`'s existing metadata onto every chunk they produce — a copy operation, not something invented at split time. If metadata isn't attached before splitting, there's nothing to copy, and you'd have to manually reconstruct which source file every one of dozens of chunks came from — exactly the bookkeeping automatic propagation gives you for free. Attaching metadata after chunking also breaks source citation: without it, a retrieved answer can't be traced back to the document it came from.
+
+**Key points:**
+- `split_documents()` copies existing metadata forward — a copy, not an invention
+- Nothing to copy from if metadata isn't attached before splitting
+- Attaching after would mean manually mapping each of dozens of chunks back to its source
+- Direct consequence of skipping this: losing the ability to cite sources in answers
+- This attachment happens at the loading stage, before any splitter runs
+
+**Common mistake:** Assuming metadata can be "cleaned up" after chunking — by then the natural one-to-one link between a chunk and its original document is gone.
+
+---
+
+### Q3. In `RecursiveCharacterTextSplitter`, what is the splitter actually recursing over?
+
+**Answer:** The recursion is over the separator priority list, applied within a single piece of text — not recursion over your list of documents (processing multiple documents is a plain loop). The splitter tries the first separator (paragraph breaks, `\n\n`); if a resulting piece is still too big, it recursively applies the next separator (line breaks, then `". "`, then space) to that same piece, falling all the way to character-level splitting as a last resort. This produces cleaner cuts than a single fixed separator would.
+
+**Key points:**
+- Recursion = trying separators in priority order, not looping over documents
+- Order: paragraph breaks → line breaks → sentence-ish breaks → spaces → raw characters
+- Each fallback only applies to a piece still too big after the previous separator
+- Character-level splitting is the last resort, used only when nothing else fits
+- Produces cleaner chunk boundaries than a single fixed-separator splitter would
+
+**Common mistake:** Describing "recursive" as iterating over multiple documents — that part of the pipeline is a simple loop, not recursion.
+
+---
+
+### Q4. Parent-child chunking means storing two copies of your content instead of one. When is that extra storage and complexity worth paying for, and what specifically breaks if you use plain recursive chunking alone?
+
+**Answer:** Parent-child chunking earns its cost for structured, dense content where an isolated chunk is misleading alone — a price-table row with no column headers, a form field with no label. Search runs against small, precise child chunks; a matching child promotes its linked, larger parent to the LLM, restoring surrounding context. It's not a guarantee, though — the parent splitter is still character-count-driven, so a table header can still fall outside even a wider window. Parent-child reduces the risk of losing context; it doesn't eliminate it.
+
+**Key points:**
+- Search targets small child chunks; a match promotes to its linked, larger parent
+- Worth the extra storage for structured content (tables, forms) where isolated chunks lose meaning
+- Not worth it for flowing prose, where one well-sized chunk is usually already self-contained
+- Parent-child reduces the odds of losing context — it does not guarantee keeping it
+- Real production fix for tables: denormalize headers into every row's own text, don't just rely on window size
+
+**Common mistake:** Treating parent-child chunking as a guaranteed fix for context loss — it's a probability improvement, still blind to actual document structure.
+
+---
