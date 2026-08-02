@@ -132,7 +132,6 @@
 - Vector DBs (Pinecone, FAISS, etc.) store plain number arrays with no awareness of which model made them
 - Different dimensions (3072 vs 1536 ) → hard crash (shape mismatch in the similarity math) 
 e.g., text-embedding-3-large = 3072 numbers vs. text-embedding-3-small = 1536 numbers) → this actually does throw a hard, loud error. Your cosine_sim function would crash on the dot product — numpy can't multiply arrays of mismatched shape. You'd catch this in five seconds.
-
 - Same dimensions, different model → silent failure — the math runs, the result is meaningless
 - Changing `EMBEDDING_MODEL` requires a full re-index of every existing vector, not just a config edit
 
