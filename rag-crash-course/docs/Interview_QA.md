@@ -153,3 +153,96 @@ e.g., text-embedding-3-large = 3072 numbers vs. text-embedding-3-small = 1536 nu
 **Common mistake:** Assuming cosine and Euclidean always rank results differently — for normalized vectors they don't; the real reason to default to cosine is not having to rely on that guarantee holding for every model.
 
 ---
+
+## Lesson 5 — Vector Store & Indexing (the write path)
+
+### Q1. Why must a Pinecone index's `dimension` exactly match the embedding model's output size, and what concretely happens if it doesn't?
+
+**Answer:** Pinecone pre-allocates storage for a fixed vector length set at index-creation time. Upsert a vector of a different length (e.g. 3072-dim into a 1536-dim index) and Pinecone rejects it immediately — a loud, hard error, nothing gets stored. The more dangerous case is a same-dimension mismatch: switching to a different model that happens to output the same length passes every check and stores fine, but the vectors now represent an incompatible coordinate space — similarity search runs without error and quietly returns meaningless results.
+
+**Key points:**
+- Dimension is fixed and pre-allocated at index-creation time, not adjustable per-upsert
+- Wrong dimension → Pinecone rejects the upsert outright (loud, immediate failure)
+- Same dimension, different model → passes every check, but vectors are geometrically incompatible
+- That second case is silent: no crash, just quietly wrong retrieval results
+- Always derive dimension from the embedding model in use via a lookup table — never hardcode it
+
+**Common mistake:** Assuming any error at all means "safe" — the scarier failure mode (different model, same dimension) produces no error whatsoever.
+
+---
+
+### Q2. Why is a deterministic vector ID (like a content-derived `chunk_id`) a production requirement rather than a nicety?
+
+**Answer:** Without a deterministic ID, re-running ingestion generates a fresh random ID for every chunk each time, so unchanged content gets inserted as brand-new vectors on every run — duplicates pile up forever. A deterministic ID (e.g. `f"{source}::{index}"`) means the same chunk always maps to the same vector ID, so re-running ingestion overwrites existing vectors in place instead of duplicating them. This is also what makes safe incremental updates possible: re-index just one changed document without deleting and rebuilding the entire index.
+
+**Key points:**
+- No deterministic ID → every re-run creates fresh random IDs → duplicate vectors pile up
+- Deterministic ID → same chunk always maps to the same vector ID → re-run overwrites in place
+- This is what makes idempotent, safe re-runs of ingestion possible
+- Also enables incremental updates: re-index one changed doc without rebuilding the whole index
+- Avoids the cost and downtime of a full index rebuild on every content change
+
+**Common mistake:** Thinking deterministic IDs are only about avoiding duplicate rows — the bigger production payoff is enabling safe incremental re-indexing.
+
+---
+
+### Q3. What is a Pinecone namespace, and when would you reach for one instead of a metadata filter?
+
+**Answer:** A namespace is a hard partition inside a single Pinecone index — vectors in one namespace are structurally unreachable from a query scoped to another namespace, similar to a separate schema per tenant in Postgres. A metadata filter (e.g. `team`/`doc_type`) is different: it's a `WHERE`-clause-style constraint applied at query time over one shared pool of vectors, so its correctness depends on every query remembering to apply it. Reach for namespaces when isolation must be guaranteed even against a missed filter (true multi-tenant SaaS); metadata filtering suits single-tenant categorization, like one company's internal docs split by team.
+
+**Key points:**
+- Namespace = structural partition inside one index; a query scoped to one namespace cannot see another's vectors, even by accident
+- Metadata filter = `WHERE`-clause-style constraint over a shared pool; correctness depends on the query always applying it
+- Pinecone applies a default namespace automatically when none is specified
+- Namespaces suit true multi-tenant isolation (a data leak there is a security incident)
+- Metadata filters suit single-tenant categorization (e.g. one company's docs split by `team`/`doc_type`)
+
+**Common mistake:** Relying on metadata filters alone for true multi-tenant data isolation — a single missed filter in one code path means one tenant's data leaks into another's search results.
+
+---
+## Lesson 6 — Retrieval & Metadata Filtering (the read path)
+
+### Q1. Why does metadata filtering happen at the vector-search layer (`filter=` inside the similarity search call), instead of retrieving a wide set of results first and filtering them afterward with plain Python?
+
+**Answer:** Filtering inside the vector search means the "top-K" is chosen only from candidates that already match the filter, so relevant results aren't crowded out by irrelevant ones before scoring even happens — important at scale, where a truly relevant result might not appear anywhere near the top of an unfiltered ranking. It's also cheaper: narrowing the search space first avoids ranking across an entire index only to discard most of the results. And it's the real enforcement point for access control — a filter baked into the query can't be skipped, unlike a post-hoc check every future code path has to remember to add.
+
+**Key points:**
+- Filtering pre-narrows the candidate pool before ranking, so top-K slots go to in-scope results, not irrelevant ones
+- At scale, a genuinely relevant result could rank far outside a small top-K if filtered only afterward
+- Pre-filtering is cheaper — avoids ranking across the whole index just to discard most results
+- Filtering inside the query is the actual access-control enforcement point — can't be accidentally skipped downstream
+- Post-hoc filtering means every future code path touching results must remember to reapply the check
+
+**Common mistake:** Assuming post-hoc filtering gives "the same result, just done later" — at scale it can silently drop genuinely relevant results that never made it into an unfiltered top-K in the first place.
+
+---
+
+### Q2. A retrieved chunk comes back with `score=0.2244`. Is that "22% confident this is the right answer"? Why or why not?
+
+**Answer:** No. Cosine similarity is just the angle between two vectors — nothing about how it's computed was ever trained against real correctness labels, so there's no universal scale where a given number means a fixed "% correct." A 0.73 on one query might be a strong match, while a 0.6 on a completely different query might already be the best match available in the whole index. Scores are meaningful when compared *within* the same query (e.g. filtered vs. unfiltered runs) — treating one score in isolation as a confidence percentage is not.
+
+**Key points:**
+- Cosine similarity = geometric angle between two vectors, not a probability
+- Never calibrated against ground-truth correctness — no classifier trained it to mean "% likely correct"
+- No universal threshold (e.g. "0.7 = good") — the meaningful scale depends on the query and domain
+- Valid use: comparing scores *within* one query's results (e.g. filtered vs. unfiltered), not across queries or in isolation
+- A high score can still be the wrong chunk (similar wording, wrong content); a lower score can still be the right one (same fact, different phrasing)
+
+**Common mistake:** Presenting a raw similarity score to end users as a "% match" or confidence value — it has no calibrated relationship to actual correctness.
+
+---
+
+### Q3. Production retrieval often uses a "wide retrieval, then narrow" pattern — e.g. retrieve `k=15–25`, then cut down to a handful before generation. How is that different from just calling `retrieve()` with `k=5` directly?
+
+**Answer:** It's two different tools doing two different jobs, not just "get more, then pick fewer." The first stage (vector search) is optimized for speed and recall at scale — fast, approximate nearest-neighbor search across a potentially huge index. The second stage (a reranker) is optimized for precision on a small set — it can afford to be slower and more accurate specifically because it's only evaluating 15–25 candidates, not the whole index. Calling `retrieve()` with `k=5` directly relies on a single fast-but-approximate pass to also be maximally precise, risking missed relevant results a wider first pass would have caught.
+
+**Key points:**
+- Two-stage pattern = two different tools, each suited to its own job, not one tool doing double duty
+- Stage 1 (wide vector search): optimized for recall and speed at scale
+- Stage 2 (narrow/rerank): optimized for precision, affordable specifically because the candidate set is already small
+- Direct `k=5` risks missing a relevant chunk that would have ranked outside the top 5 but inside the top 20
+- The reranker's extra cost is only viable because it never runs against the full index — just the narrowed candidate set
+
+**Common mistake:** Treating "wide then narrow" as equivalent to just picking a smaller `k` upfront — the point is using a cheap-and-wide tool first, then a slow-and-accurate tool second, not skipping straight to precision with one pass.
+
+---
