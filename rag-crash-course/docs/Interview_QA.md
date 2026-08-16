@@ -246,3 +246,82 @@ e.g., text-embedding-3-large = 3072 numbers vs. text-embedding-3-small = 1536 nu
 **Common mistake:** Treating "wide then narrow" as equivalent to just picking a smaller `k` upfront — the point is using a cheap-and-wide tool first, then a slow-and-accurate tool second, not skipping straight to precision with one pass.
 
 ---
+
+## Lesson 6.5 — Query Transformation & Hybrid Retrieval Awareness
+
+### Q1. Why does HyDE's hypothetical answer improve retrieval despite possibly being factually wrong? What's actually being matched when the embedding search runs?
+
+**Answer:** Embeddings capture vocabulary and style, not factual correctness — nothing in the embedding process checks whether text is true. HyDE asks an LLM to write a short, document-styled hypothetical answer to the question, then embeds and searches with that instead of the raw question. Even when its specific facts are invented, its phrasing and structure resemble the real indexed chunks far more than a short user question does, so the resulting vector lands closer to the actual answer in vector space. The hypothetical is never shown to the user or checked for accuracy — its only job is to exist long enough to be embedded.
+
+**Key points:**
+- Embeddings encode vocabulary/phrasing/structure, not truth — nothing validates correctness
+- HyDE generates a fake but document-styled answer specifically to be embedded, not to be read
+- A wrong-but-well-styled hypothetical still lands closer to real chunks than a short raw question would
+- The hypothetical is discarded after embedding — never shown to the user, never fact-checked
+- This is a vocabulary-bridging trick, not a fact-generation trick
+
+**Common mistake:** Assuming HyDE works because the LLM "knows the answer" — it doesn't need to be right, it just needs to sound like the corpus.
+
+---
+
+### Q2. Why does a hypothetical answer count as "document language," even when its specific facts are invented — and why does a raw user question usually not count as document language?
+
+**Answer:** Corpus documents and user questions are written in different linguistic registers: docs are declarative and expository ("Employees requiring travel authorization must..."), while questions are short and interrogative ("what do I do if..."). Embeddings pick up on register and phrasing patterns, not just abstract topic, so a question and its answer can sit apart in vector space purely because of how they're phrased. HyDE's prompt explicitly asks the LLM to write "in the style of an internal policy document," so the output lands in the right register on purpose — even with invented facts. A raw question usually isn't in that register, though nothing structurally prevents a user from typing something already doc-styled.
+
+**Key points:**
+- Corpus docs = declarative/expository register; user questions = short/interrogative register
+- Embeddings encode register and phrasing patterns, not just topic — different register, different vector neighborhood, even on the same subject
+- HyDE's prompt deliberately targets the corpus's register ("write like an internal policy doc")
+- "Document language" is about form/style, not the specific words or accuracy
+- "Usually" not "never" — a user could type a doc-styled statement and skip the vocabulary gap entirely
+
+**Common mistake:** Framing this as "embeddings understand meaning, so wording shouldn't matter" — in practice, phrasing/register differences are exactly what create the vocabulary gap HyDE is built to bridge.
+
+---
+
+## Lesson 6.6 — Hybrid Retrieval Implementation (Dense + Sparse/BM25 + Reciprocal Rank Fusion)
+
+### Q1. Why does RRF operate on rank position instead of raw score, and why does that specifically let you fuse two lists on completely different, incomparable scales?
+
+**Answer:** Dense cosine similarity sits roughly in `[-1, 1]`; BM25's term-frequency score is unbounded and can run into double digits — adding or averaging them directly would let whichever number happens to be numerically larger dominate, regardless of actual relevance. RRF discards the raw scores entirely and scores each chunk by `Σ 1/(k+rank)` across every list it appears in, using only rank position — the one thing every ranking shares no matter how its underlying score is computed. This is also why RRF needs no manually-tuned weights: there's no score magnitude left to weight once only rank is being used.
+
+**Key points:**
+- Cosine similarity ≈ `[-1, 1]`; BM25 score is unbounded — the two are not directly comparable
+- Averaging or summing raw scores lets whichever signal's scale is numerically larger dominate
+- RRF formula: `score = Σ 1/(k+rank)` across every list a chunk appears in
+- Using rank instead of score is what makes fusion possible with zero normalization step
+- No tunable weights needed — nothing left to weight once only rank order is used
+
+**Common mistake:** Assuming RRF requires normalizing the two systems' scores to a shared range first — the entire point of RRF is that it avoids needing that step at all.
+
+---
+
+### Q2. Why is a two-independent-retrievers-plus-RRF approach *not* an index-level change, unlike Pinecone-native hybrid search — and what do you give up by choosing it?
+
+**Answer:** The deciding factor for "index-level" isn't how many retrieval systems exist — it's whether you have to migrate or modify your *existing* storage layer's schema or metric. Pinecone-native hybrid requires rebuilding the index with a `dotproduct` metric and upserting sparse vectors alongside dense ones on every record — a real migration. Two independent retrievers fused with RRF leave the existing dense index completely untouched; a local BM25 index can be pure in-memory application code, not persisted infrastructure at all. The real cost: one query becomes two, and you lose Pinecone's server-side `alpha` tuning — though RRF's whole design point is that it never needed that kind of tuning to begin with.
+
+**Key points:**
+- "Index-level" = touching/migrating existing storage-layer schema or metric, not "how many systems exist"
+- Pinecone-native hybrid: `dotproduct` metric, sparse vectors upserted per record — a genuine index migration
+- Two-retriever RRF: the existing dense index stays 100% unchanged
+- A local BM25 index can be pure in-memory application code, not real infrastructure
+- Tradeoff: two retrieval calls instead of one; no server-side `alpha` tuning available (but also none required)
+
+**Common mistake:** Assuming "two indexes/systems involved" automatically means "index-level" — what actually matters is whether existing infrastructure gets modified, not how many systems are in play.
+
+---
+
+### Q3. What kind of query is BM25 expected to win on versus dense — grounded in real evidence, not just theory?
+
+**Answer:** In theory, BM25 wins on keyword-heavy/exact-match queries and dense wins on paraphrased/semantic ones — but real evidence only cleanly confirmed half of that. On a paraphrased query, dense swept the top results while BM25 visibly wandered into off-topic documents — a clean confirmation. On an exact-token query, dense matched BM25's result quality just as well, and BM25's own ranking was degraded by a zero-score tiebreak artifact (unrelated chunks winning ties purely by corpus-load order, not relevance) — the predicted BM25 advantage didn't clearly show up. The honest lesson: theoretical strengths don't always surface cleanly at small corpus scale.
+
+**Key points:**
+- Theory: BM25 wins on keyword/exact-match queries; dense wins on paraphrase/semantic queries
+- Real evidence, paraphrase query: dense swept cleanly, BM25 wandered off-topic — theory confirmed
+- Real evidence, exact-token query: dense matched BM25's quality too — theory NOT cleanly confirmed
+- BM25's list was degraded by a zero-score tiebreak artifact (ties broken by load order, not relevance)
+- Real lesson: check actual evidence, don't assume a technique's textbook strength always shows up in practice
+
+**Common mistake:** Reciting the textbook BM25-vs-dense split as if it always holds — small-scale artifacts (like tiebreaking) can mask or override the expected signal in a real run.
+
+---

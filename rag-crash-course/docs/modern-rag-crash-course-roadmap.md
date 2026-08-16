@@ -4,7 +4,9 @@
 >
 > **Updated to align with `month-02-roadmap.md`.** Every technique below now carries that roadmap's own priority label (🔴/🟡/🟢) so the mental models you build here transfer directly into Week 5–6 instead of needing to be re-learned. See §0.6 for the full mapping.
 >
-> **Revision 2 (this version).** Three changes made at Kamran's request, after Lesson 1 was already built and confirmed against the original "DevPortal" domain: (1) the entire knowledge base is now a fictional B2B corporate-apparel and gifting manufacturer, **Turab Industries Pvt. Ltd.**, instead of an internal dev platform; (2) a new **Lesson 2.5** adds Tier-1 PDF ingestion — two real PDFs, created by Kamran from Claude-generated content, loaded the same way as any other seed doc — deliberately scoped short of an upload endpoint or file validation (that's Tier 2/3, explicitly out of scope, see Lesson 2.5's own framing); (3) **Lesson 3** upgrades Parent-Child Chunking from a theory-only aside to a small, standalone, implemented comparison against Recursive Chunking. None of this changes the pipeline's shape or Lessons 4 onward's actual indexing path — see each lesson for exactly what did and didn't change.
+> **Revision 2.** Three changes made at Kamran's request, after Lesson 1 was already built and confirmed against the original "DevPortal" domain: (1) the entire knowledge base is now a fictional B2B corporate-apparel and gifting manufacturer, **Turab Industries Pvt. Ltd.**, instead of an internal dev platform; (2) a new **Lesson 2.5** adds Tier-1 PDF ingestion — two real PDFs, created by Kamran from Claude-generated content, loaded the same way as any other seed doc — deliberately scoped short of an upload endpoint or file validation (that's Tier 2/3, explicitly out of scope, see Lesson 2.5's own framing); (3) **Lesson 3** upgrades Parent-Child Chunking from a theory-only aside to a small, standalone, implemented comparison against Recursive Chunking. None of this changes the pipeline's shape or Lessons 4 onward's actual indexing path — see each lesson for exactly what did and didn't change.
+>
+> **Revision 3 (this version).** Made at Kamran's request while Lesson 6.5 was in progress, before its own hybrid-retrieval paragraph had been reached as a checklist item: Lesson 6.5 originally scoped "Dense + Sparse (BM25) + RRF hybrid search" as *theory only, not implemented* — deferred to Month 2, Lesson 5.3, on the grounds that hybrid search is index-level infrastructure disproportionate to an eight-document corpus. Kamran had the theoretical grounding already and asked for hands-on practice now instead of waiting for Month 2. Resolution: a new **Lesson 6.6 — Hybrid Retrieval Implementation** is inserted between 6.5 and 7 (same decimal-insert convention already used to slot 6.5 itself in without renumbering anything downstream), and it does NOT need to be deferred infrastructure — see 6.6's own "Why This Matters" for the correction to the original "hybrid is inherently index-level" framing. Lesson 6.5's hybrid-retrieval paragraph and concept check were both updated to match. Lesson 6.5's own scope (HyDE) is unchanged.
 
 ---
 
@@ -27,7 +29,7 @@ Each doc carries lightweight metadata: `team` (`leadership` | `hr` | `finance` |
 
 **How to use this document.** Work top to bottom. Each lesson is self-contained: objective, why it matters, what to build, a short illustrative code pattern (for your own mental model), and a ready-to-paste "AI Build Prompt" you can hand to a coding assistant to generate the actual implementation. Do the "Done When" check before moving on — RAG bugs are almost always silent (a wrong answer that *sounds* confident), and they compound if you don't verify each stage independently.
 
-**Total time:** ~3 hours 50 minutes. Natural split point: Lessons 1–5 (~1h55, now including Lesson 2.5's PDF ingestion, gets you to a populated, queryable vector index) and Lessons 6–11 (~1h55, retrieval, query transformation, generation, the full app, evaluation, and production hardening).
+**Total time:** ~4 hours 15 minutes (was ~3h50 before Revision 3 added Lesson 6.6). Natural split point: Lessons 1–5 (~1h55, now including Lesson 2.5's PDF ingestion, gets you to a populated, queryable vector index) and Lessons 6–11 (~2h20, retrieval, query transformation, hybrid retrieval, generation, the full app, evaluation, and production hardening).
 
 **Assumed prerequisites (per your setup):** you already have an `OPENAI_API_KEY` and a `PINECONE_API_KEY`, Python 3.13+ and `uv` installed. This course does not walk you through obtaining either key or installing base tooling.
 
@@ -70,7 +72,7 @@ This crash course is scoped to be the "why does any of this actually work" found
 | Lesson 6 | Metadata Extraction / filtering | 🔴 | 5.4 |
 | Lesson 6.5 | Query Expansion | 🔴 | 6.3 |
 | Lesson 6.5 (theory + light implementation) | HyDE | 🔴 | 6.3 |
-| Lesson 6.5 (theory only, not implemented) | Dense + Sparse (BM25) + RRF hybrid search | 🔴 | 5.3 |
+| Lesson 6.6 (implemented) | Dense + Sparse (BM25) + RRF hybrid search | 🔴 | 5.3 |
 | Lesson 10 | Bi-encoder vs. cross-encoder | 🔴 | 5.5 |
 | Lesson 10 (Pinecone hosted, not Cohere) | Cross-Encoder Re-ranking | 🔴 | 5.5 |
 | Lesson 9 | RAG evaluation (Ragas here; RAGAS + LLM-as-judge + golden dataset, deepened) | 🔴 | 7.x |
@@ -808,7 +810,7 @@ Lesson 2 defined Advanced RAG as Naive RAG plus fixes at exactly two points: **p
 
 **HyDE — Hypothetical Document Embeddings** *(Month 2 label: 🔴 — Lesson 6.3).* Instead of embedding the user's raw question, ask the LLM to first draft a plausible, made-up *answer* to it — with no retrieval involved yet — then embed *that hypothetical answer* and use it as the search query. This sounds backwards until you see why it works: your indexed chunks are written in "document language" (declarative, detailed, answer-shaped), while a user's question is written in "question language" (short, interrogative, vague). A hypothetical answer is already in document language, even though it might be factually wrong — and it's the *style and vocabulary* match that improves retrieval, not the hypothetical's correctness. HyDE is cheap enough (one extra LLM call before embedding) that this course implements it as an optional mode on `retrieve()` below.
 
-**Hybrid Retrieval — dense + sparse (BM25) + Reciprocal Rank Fusion** *(Month 2 label: 🔴 — Lesson 5.3).* Dense (embedding) search is strong on paraphrase and synonym matching but weak on exact tokens — a chunk containing the literal string `TUR-PROC-014` (a purchase-order or SKU code) doesn't necessarily embed "close" to a query containing that same string, because embeddings capture meaning, not exact characters. **Sparse retrieval** (BM25 — term-frequency-weighted exact lexical matching, no embeddings involved) is the mirror image: it excels at exactly what dense search misses — SKU codes, PO numbers, proper nouns, domain jargon. Running both and merging the two ranked lists with **Reciprocal Rank Fusion** — `score = Σ 1 / (k + rank_i)`, with `k = 60` as the standard starting constant — gives you a single fused ranking that rewards a chunk for ranking well in *either* list, with no manually-tuned weights required to get a reasonable result. This course explains the mechanism and its expected gain (typically 5–15% recall improvement over dense alone, per Month 2's own figures) but doesn't implement it: hybrid search is an *index-level* decision, not a pure application-code addition like HyDE is — it needs a second sparse index (or a Pinecone index built with `metric="dotproduct"` supporting both `values` and `sparse_values`) reconfigured from the cosine-metric index Lesson 5 already built, plus a BM25 encoder library. Real, worthwhile infrastructure — genuinely disproportionate to an eight-document corpus with limited exact-match-sensitive content. Month 2, Lesson 5.3 builds it for real.
+**Hybrid Retrieval — dense + sparse (BM25) + Reciprocal Rank Fusion** *(Month 2 label: 🔴 — Lesson 5.3).* Dense (embedding) search is strong on paraphrase and synonym matching but weak on exact tokens — a chunk containing the literal string `TUR-PROC-014` (a purchase-order or SKU code) doesn't necessarily embed "close" to a query containing that same string, because embeddings capture meaning, not exact characters. **Sparse retrieval** (BM25 — term-frequency-weighted exact lexical matching, no embeddings involved) is the mirror image: it excels at exactly what dense search misses — SKU codes, PO numbers, proper nouns, domain jargon. Running both and merging the two ranked lists with **Reciprocal Rank Fusion** — `score = Σ 1 / (k + rank_i)`, with `k = 60` as the standard starting constant — gives you a single fused ranking that rewards a chunk for ranking well in *either* list, with no manually-tuned weights required to get a reasonable result. **Revision 3 update:** this course now implements exactly this — see **Lesson 6.6**, immediately after this lesson — as a real, hands-on build rather than theory only. One correction worth flagging up front: hybrid search is only *necessarily* an index-level decision if you build it Pinecone-native (`metric="dotproduct"`, sparse+dense values on every vector, a full index migration off the cosine index Lesson 5 built). RRF-based fusion of two *independent* retrievers — the existing dense Pinecone index, untouched, plus a small in-memory BM25 index — is exactly what makes hybrid buildable as pure application code instead, no index migration required. Lesson 6.6 builds that version.
 
 ### 🛠️ What To Build
 Add a `hyde_query()` function and wire it into `retrieve()` as an optional `query_transform` parameter (defaulting to `"none"`, so nothing built in Lessons 7–8 has to change).
@@ -866,12 +868,120 @@ Do not modify answer_question() or the FastAPI routes from Lessons 7-8
 The demo script shows a visible difference between the two runs on the deliberately vague question — either a different top chunk, or the same chunk with a meaningfully different score — proving `hyde_query()` is actually changing what gets embedded and searched, not just adding an unused code path.
 
 ### 🔑 Concepts You Must Be Able to Explain
-Why HyDE's hypothetical answer improves retrieval *despite* possibly being factually wrong — the mechanism is vocabulary/style matching, not correctness. Why RRF needs no tuned weights to be a reasonable default (it rewards agreement across ranked lists, not any one list's absolute scores). Why hybrid retrieval is an index-level decision (metric, sparse vectors) while reranking (Lesson 10) and HyDE (this lesson) are both pure application-code additions that don't touch the index at all.
+Why HyDE's hypothetical answer improves retrieval *despite* possibly being factually wrong — the mechanism is vocabulary/style matching, not correctness. Why a hypothetical answer is already in "document language" even when its facts are invented, and why that's specifically what a raw user question usually isn't. *(RRF and the index-level-vs-application-code question move to Lesson 6.6's own concept check, now that hybrid retrieval is built for real there instead of only explained here.)*
 
 ### ⏭️ Deferred (Production Extension)
-Query expansion implementation (multi-query generation + deduplication); a full dense+sparse Pinecone index with a BM25 sparse encoder; step-back prompting (abstracting a specific question into a more general one before retrieving); corrective RAG (an LLM-as-judge grading step that rewrites and retries a bad retrieval — needs LangGraph's cycles, Month 2 Lesson 6.2); adaptive RAG query routing (classify query complexity first, route to the cheapest pattern that can answer it — Month 2 Lesson 6.3, the 2026 production default).
+Query expansion implementation (multi-query generation + deduplication); step-back prompting (abstracting a specific question into a more general one before retrieving); corrective RAG (an LLM-as-judge grading step that rewrites and retries a bad retrieval — needs LangGraph's cycles, Month 2 Lesson 6.2); adaptive RAG query routing (classify query complexity first, route to the cheapest pattern that can answer it — Month 2 Lesson 6.3, the 2026 production default). *(Hybrid retrieval is no longer deferred — see Lesson 6.6, immediately next.)*
 
 ### ⏱️ ~16 minutes
+
+---
+
+## 6.6. Lesson 6.6 — Hybrid Retrieval Implementation (Dense + Sparse/BM25 + Reciprocal Rank Fusion)
+
+*(Month 2 label: 🔴 — Lesson 5.3. Added via Revision 3, at Kamran's request, after Lesson 6.5 had already scoped hybrid search as theory-only — hands-on practice specifically requested, ahead of Month 2. Same decimal-insert convention already used to slot 6.5 in between Lessons 6 and 7 without renumbering anything downstream.)*
+
+### 🎯 Objective
+Build a real, working hybrid retriever: an independent sparse (BM25, exact lexical match) retriever running alongside the existing dense (embedding) retriever from Lesson 6, fused into one ranked list with Reciprocal Rank Fusion — no Pinecone index migration required.
+
+### 🧠 Why This Matters
+Lesson 6.5 named the problem: dense search is strong on paraphrase and meaning, weak on exact tokens (SKU codes, PO numbers, proper nouns). BM25 is the mirror image — pure term-frequency lexical matching, strong on exact tokens, blind to paraphrase. Neither alone is enough; production retrieval systems that need both reach for hybrid.
+
+There are two genuinely different ways to build "hybrid," and which one you reach for is an architecture decision, not just an implementation detail:
+
+- **Index-level hybrid (Pinecone-native).** Rebuild your index with `metric="dotproduct"`, store both dense `values` and sparse `values`/`sparse_indices` on every vector, and let Pinecone blend them at query time with a single tunable `alpha` weight. One index, one query round-trip — but it means migrating off the cosine-metric index Lesson 5 already built and populated.
+- **Application-level hybrid (this lesson).** Keep the existing dense Pinecone index completely untouched. Run a second, independent retriever — a local, in-memory BM25 index over the same chunks — and merge the two *separately produced ranked lists* with Reciprocal Rank Fusion. No index migration, no new metric, no sparse encoder tied to Pinecone specifically. It's also the more portable pattern: the same shape you'd use to fuse results from two entirely different systems (e.g. Elasticsearch BM25 + a vector DB), not just two modes of one vendor's index.
+
+**Worth correcting explicitly from how Lesson 6.5 first framed this:** hybrid search is not *inherently* an index-level decision — that was only true for the Pinecone-native path. RRF-based fusion is specifically what makes hybrid retrieval buildable as a pure application-code addition, exactly like HyDE (6.5) and reranking (Lesson 10). That's *why* RRF is the standard choice when you're bolting hybrid onto an existing single-metric index rather than designing it in from day one.
+
+### 📥 Dependencies
+```bash
+uv add rank-bm25
+```
+
+| Package | Why |
+|---|---|
+| `rank-bm25` | pure-Python BM25 implementation (`BM25Okapi`) — no external service, no API key, scores held entirely in memory. Deliberately not `langchain-community`'s `BM25Retriever` wrapper — that class is a thin shim over this same library, and `langchain-community` was already flagged as being sunset back in Lesson 2.5. |
+
+### 🛠️ What To Build
+- `retrieval/sparse_retriever.py` — `build_bm25_index(chunks: list[Document]) -> tuple[BM25Okapi, list[Document]]`, tokenizing each chunk's `page_content` (a simple `.lower().split()` is enough for this corpus size) and returning the fitted index alongside the chunks list in the same order, so a BM25 result position maps back to its `Document`.
+- `sparse_retrieve(bm25_index, chunks, query: str, k: int = 10) -> list[Document]` — tokenizes the query the same way, scores every chunk, returns the top-k `Document`s by BM25 score. No filtering, no metadata — BM25 never touches Pinecone.
+- `retrieval/fusion.py` — `reciprocal_rank_fusion(ranked_lists: list[list[Document]], k: int = 60) -> list[Document]`, keyed on each `Document`'s `chunk_id` so a chunk appearing in both lists has its scores summed, not counted twice.
+- `hybrid_retrieve(vector_store, bm25_index, chunks, query: str, k: int = 5) -> list[Document]` in `retriever.py` — runs the existing dense `retrieve()` and the new `sparse_retrieve()` independently (each at a wider `k`, e.g. 10), fuses with RRF, returns the top-k fused result.
+- `run_hybrid_demo.py` at the project root (same entry-point convention as `run_retrieval_demo.py` and `run_hyde_demo.py`) — runs one query built to favor BM25 (an exact token pulled straight from `corporate_gifts_price_list.pdf`) and one built to favor dense (a paraphrase, reusing 6.5's demo-style vague question) through dense-only, BM25-only, and hybrid retrieval — printing all three ranked lists side by side per query.
+
+### 💡 Core Pattern
+```python
+# The point of this snippet: RRF needs each list's RANK POSITION, not
+# its raw score — that's what lets you fuse a cosine similarity list
+# and a BM25 score list, which sit on completely different, incomparable
+# scales, without any manual tuning between them.
+from collections import defaultdict
+from langchain_core.documents import Document
+
+
+def reciprocal_rank_fusion(
+    ranked_lists: list[list[Document]], k: int = 60
+) -> list[Document]:
+    scores: dict[str, float] = defaultdict(float)
+    doc_lookup: dict[str, Document] = {}
+
+    for ranked_list in ranked_lists:
+        for rank, doc in enumerate(ranked_list, start=1):
+            chunk_id = doc.metadata["chunk_id"]
+            scores[chunk_id] += 1 / (k + rank)  # the whole formula — no weights
+            doc_lookup[chunk_id] = doc
+
+    fused_ids = sorted(scores, key=lambda cid: scores[cid], reverse=True)
+    return [doc_lookup[cid] for cid in fused_ids]
+```
+
+### 🤖 AI Build Prompt
+```text
+Using rank-bm25 and the existing src/rag/retrieval/retriever.py from
+Lessons 6/6.5, generate:
+1. src/rag/retrieval/sparse_retriever.py:
+   - build_bm25_index(chunks: list[Document]) -> tuple[BM25Okapi, list[Document]]
+     tokenizing each chunk's page_content with a simple .lower().split(),
+     returning the fitted BM25Okapi plus the chunks list in the same
+     order (so a BM25 result index maps back to its Document).
+   - sparse_retrieve(bm25_index, chunks, query: str, k: int = 10) -> list[Document]
+     tokenizes the query the same way, scores every chunk with
+     bm25_index.get_scores(...), returns the top-k Documents by score,
+     highest first.
+2. src/rag/retrieval/fusion.py:
+   - reciprocal_rank_fusion(ranked_lists: list[list[Document]], k: int = 60) -> list[Document]
+     exactly as shown above — sum 1/(k+rank) per chunk_id across every
+     input list, return Documents sorted by fused score descending.
+3. Extend src/rag/retrieval/retriever.py with hybrid_retrieve(vector_store,
+   bm25_index, chunks, query: str, k: int = 5) -> list[Document] that
+   calls the existing retrieve() (dense, k=10) and sparse_retrieve()
+   (k=10) independently, fuses both lists with reciprocal_rank_fusion,
+   and returns the top-k fused result.
+4. src/rag/run_hybrid_demo.py at the project root: builds the BM25 index
+   once from chunk_documents(load_documents()), then runs TWO queries —
+   one containing an exact token likely to appear verbatim in
+   corporate_gifts_price_list.pdf (a specific product name or price),
+   and one paraphrased/vague HR question — through dense-only,
+   sparse-only, and hybrid retrieval, printing each of the three ranked
+   result lists (chunk source + rank) side by side per query so the
+   difference is visible.
+
+Do not modify the existing dense retrieve() function's signature or
+default behavior, and do not touch the Pinecone index's metric or
+schema — the dense path from Lessons 5/6 stays completely unchanged.
+```
+
+### ✅ Done When
+The demo shows a real, visible difference across the three modes on at least one of the two queries — e.g. the exact-token query ranks a chunk highest under BM25/hybrid that dense-only ranks lower (or misses from its top-k entirely), proving BM25 is contributing real signal, not just being computed and discarded. Running the same demo twice produces identical rankings (no randomness anywhere in BM25 or RRF), confirming the fusion is fully deterministic — unlike HyDE (Lesson 6.5), which depends on an LLM call.
+
+### 🔑 Concepts You Must Be Able to Explain
+Why RRF operates on rank position, not raw score — and why that specifically is what lets you fuse two lists that were never designed to be on the same numeric scale (cosine similarity ∈ [-1, 1] vs. an unbounded BM25 term-frequency score). Why this lesson's approach — two independent retrievers fused in application code — is not an index-level change, unlike Pinecone-native hybrid, and what you give up by choosing this path over migrating to a single `dotproduct` index (mainly: two retrieval calls instead of one, and no server-side `alpha` tuning). What kind of query BM25 is expected to win on, concretely, versus what kind dense is expected to win on — and why a corpus with SKU-like exact tokens (Turab's price list) is exactly the shape where hybrid earns its keep even at small scale.
+
+### ⏭️ Deferred (Production Extension)
+Migrating to Pinecone's native `dotproduct`-metric hybrid index (one query instead of two, server-side `alpha` blending) once the exact-match workload justifies the migration cost; a persistent/external BM25 index (Elasticsearch, OpenSearch) instead of rebuilding the in-memory index on every process start — necessary once the corpus is too large to tokenize and score in memory on every restart; tuning RRF's `k` constant against Lesson 9's evaluation numbers instead of using the standard `k=60` default; combining hybrid retrieval with HyDE (Lesson 6.5) — running the HyDE-generated hypothetical answer through the dense side of this same fusion, instead of the raw query.
+
+### ⏱️ ~25 minutes
 
 ---
 
