@@ -325,3 +325,129 @@ e.g., text-embedding-3-large = 3072 numbers vs. text-embedding-3-small = 1536 nu
 **Common mistake:** Reciting the textbook BM25-vs-dense split as if it always holds — small-scale artifacts (like tiebreaking) can mask or override the expected signal in a real run.
 
 ---
+
+## Lesson 7 — Prompt Augmentation & Generation
+
+### Q1. Why is the grounding instruction the single highest-leverage sentence in the whole prompt?
+
+**Answer:** It tells the model to answer only from the provided sources and to say "I don't have that in the knowledge base" instead of guessing when the sources don't contain the answer. Without it, the model silently blends retrieved facts with its own parametric knowledge — and a hallucinated answer reads with the exact same fluency and confidence as a grounded one, so there's no surface-level tell without manually checking the cited source. One sentence buys protection against the hardest-to-catch-by-eye failure mode in the whole pipeline — that's what makes it highest-leverage, not just "important."
+
+**Key points:**
+- Instructs the model to answer only from provided sources, refuse otherwise
+- Prevents silently blending retrieved facts with the model's own parametric knowledge
+- Hallucinated answers are just as fluent/confident as grounded ones — no tone-based tell
+- Cheapest possible fix (one sentence) against the hardest-to-catch RAG failure mode
+- Directly enables the refusal behavior tested in this lesson's demo (unanswerable question)
+
+**Common mistake:** Thinking any grounding-flavored wording is enough — the leverage comes specifically from making refusal an explicit, instructed option, not just from "mentioning" the sources.
+
+---
+
+### Q2. What does "lost in the middle" mean, and why is it a context-ordering problem rather than a model-capability problem?
+
+**Answer:** Long-context models measurably under-attend to information buried in the middle of a large prompt, favoring content near the start or end. It's a positional problem, not a comprehension problem — proof: take the exact same fact, move it to the front or end of the exact same context, and the exact same model with the exact same weights recalls it correctly. Nothing about the model's understanding changed, only where the fact sat. The fix is ordering retrieved chunks so the most relevant one sits closest to the question, not first in an arbitrary list. It barely matters at small `k`; it matters once `k` grows past roughly 15.
+
+**Key points:**
+- Models under-attend to info in the middle of a long context, favoring start/end
+- Diagnostic proof it's positional: same model, same weights, repositioning the fact fixes recall
+- Fix: order retrieved chunks by relevance, most relevant closest to the question
+- Non-issue at small `k` (this project's `k=5`); matters once `k` exceeds ~15
+- Distinct from a reranker (Lesson 10) — ordering existing results vs. re-scoring a candidate set
+
+**Common mistake:** Treating this as "the model isn't smart enough to read long context" — it's an attention/positional artifact, demonstrably fixable by moving the same content, not a hard capability ceiling.
+
+---
+
+### Q3. Why does `answer_question()` return `raw_chunks` alongside the answer, instead of just the final answer string?
+
+**Answer:** Without the raw retrieved chunks, a wrong or refused answer can't be diagnosed — the final string alone can't tell you whether retrieval failed (the right chunk was never fetched) or generation failed (it was fetched but ignored or misread). Those are two different bugs with two different fixes. Returning `raw_chunks` lets you check retrieval first, before touching the prompt — directly applying the "retrieval quality caps generation quality" debugging order. It also supports real evaluation work and lets a production UI show the actual cited passages, not just developer debugging.
+
+**Key points:**
+- Final answer string alone can't distinguish a retrieval failure from a generation failure
+- `raw_chunks` lets you check retrieval quality first, before touching the prompt
+- Directly implements "retrieval quality caps generation quality" as a debugging habit, not just theory
+- Needed for evaluation work (comparing what was retrieved vs. what should have been)
+- Production use beyond debugging: a real UI can show users the actual cited source passages
+
+**Common mistake:** Treating `raw_chunks` as a "nice to have for logs" — in practice it's the only way to tell which pipeline stage actually broke.
+
+---
+
+## Lesson 8 — Wiring It Together: End-to-End RAG API
+
+### Q1. Why is the vector store connection built once at server startup instead of inside the `/query` route handler? What actually goes wrong if you move it inside the route?
+
+**Answer:** Building `OpenAIEmbeddings`/`PineconeVectorStore` clients has real setup cost — auth handshakes, connection pool construction. Built once at startup, that cost is paid a single time. Built inside the route, every request pays it again: added latency on every single call, not just wasted background work. Worse, under real concurrency (many requests landing at once), each one independently opening its own client can exhaust provider-side connection or rate limits — a failure caused by needless per-request setup overhead, not by actual query volume being too high.
+
+**Key points:**
+- Client construction (auth, connection pools) is real, non-trivial setup cost
+- Per-request instantiation adds that cost as latency to every single call
+- Under concurrency, many simultaneous client instantiations can exhaust provider connection/rate limits
+- Production pattern: build once at startup, reuse across requests (same instinct as a DB connection pool built once, not per-request)
+- FastAPI's `Depends()` + `lru_cache`, or a `lifespan` + `app.state` singleton, are the more production-idiomatic ways to manage this than a bare module-level global
+
+**Common mistake:** Describing this only as "wasteful" without naming the concrete failure modes — added per-request latency, and connection/rate-limit exhaustion under concurrency are the specific, interview-worthy answers, not just "it's inefficient."
+
+---
+
+### Q2. Why is a synchronous `POST /ingest` endpoint a demo simplification rather than something you'd ship as-is? What does a real production ingestion trigger look like instead?
+
+**Answer:** A synchronous endpoint holds the HTTP connection open for the full duration of ingestion — fine for a handful of files, but a real corpus (thousands of docs) means minutes-long blocked connections, client timeouts, and no way to know which chunks made it in if the process dies mid-request. Production instead pushes the work onto a task queue (Celery/RQ/SQS), returns `202 Accepted` with a `job_id` immediately, and a separate worker process does the actual load/chunk/embed/upsert work — the caller polls a status endpoint or gets a webhook. Retries then happen at the worker/queue level. Some production triggers skip a manual endpoint entirely and fire on an event (e.g. a file landing in S3).
+
+**Key points:**
+- Blocking request/response doesn't scale past a small corpus — timeouts and no partial-progress visibility
+- Production pattern: task queue + `202 Accepted` + `job_id`, real work done by a separate worker
+- Caller polls status or receives a webhook instead of waiting on the open connection
+- Retries belong at the worker/queue level, not the original caller
+- Idempotent, deterministic IDs (Lesson 5's `chunk_id`) are what make a retried/requeued job safe — it overwrites instead of duplicating
+- Some production triggers are event-driven (e.g. an S3 upload firing a Lambda), not a manually-called endpoint at all
+
+**Common mistake:** Answering only "run it in the background" without naming the actual mechanism (queue + worker + status/webhook) or the HTTP status code convention (`202`, not `200`) that signals "accepted, not yet done."
+
+---
+
+## Lesson 9 — Retrieval Evaluation
+
+### Q1. Why are Faithfulness and Context Recall separate metrics rather than two readings of the same "quality," and what does it mean when they move independently?
+
+**Answer:** They check two different pipeline stages. Context Recall asks whether the chunks needed to answer the question were actually retrieved; Faithfulness asks whether the generated answer only makes claims the retrieved context actually supports. Because they measure different stages, they can move independently — and each combination points to a different fix. High recall + low faithfulness means the right information was retrieved but the model still said something unsupported — a generation/prompt problem, not a retrieval one. Low recall + high faithfulness means the model was completely honest about incomplete information — a retrieval problem, no prompt fix helps. Keeping them separate is what lets one number tell you which half of the pipeline broke.
+
+**Key points:**
+- Context Recall = did retrieval find what was needed; Faithfulness = does the answer stay inside what was retrieved
+- They test different stages, so they can move independently
+- High recall + low faithfulness → generation/prompt problem (right chunks retrieved, model still hallucinated)
+- Low recall + high faithfulness → retrieval problem (model was honest, but had too little to work with)
+- The real value of separating them: diagnosing which stage to fix, not just "is quality good"
+
+**Common mistake:** Treating them as two versions of one "RAG quality score" — averaging them together throws away the exact diagnostic signal that makes them useful.
+
+---
+
+### Q2. Why does the eval harness have to call the actual `answer_question()` pipeline function rather than a hand-crafted mock, for the resulting scores to mean anything?
+
+**Answer:** The eval numbers are only meaningful if they describe the system that's actually running in production. If the harness reimplements or mocks retrieval/generation instead of calling `answer_question()` — the same function the live `/query` endpoint calls — a passing score proves something about a different system, not the one being shipped. A change to `k`, the prompt, or the retriever wouldn't reliably show up in eval numbers built from a separate, hand-crafted path. Calling the real function is what makes a Ragas score trustworthy evidence about the actual application, not just a demo of the metric.
+
+**Key points:**
+- Eval scores are only trustworthy if they describe the exact system in production
+- A mocked/reimplemented path can silently diverge from the real pipeline's behavior
+- Real-function calls mean pipeline changes (`k`, prompt, retriever) actually show up in eval results
+- Same principle as integration testing against real code paths instead of stubs
+
+**Common mistake:** Building a "simplified" eval-only version of retrieval/generation for speed — it can pass cleanly while the real, shipped pipeline is broken in a way the simplified version never exercises.
+
+---
+
+### Q3. What does a low Context Precision + high Context Recall combination specifically tell you about a pipeline, and what would you actually tune in response?
+
+**Answer:** High recall means the chunks needed to answer the question are being retrieved; low precision means a lot of irrelevant chunks are coming along with them. This is a noise problem, not a missing-data problem — the pipeline finds the answer but buries it among chunks that don't belong. The fix is narrowing the retrieved set, not casting a wider net: lower `k` so fewer, more targeted chunks make it into the prompt, and/or apply metadata filtering (`team`/`doc_type`, from Lesson 6) to exclude out-of-scope chunks before ranking even happens. Increasing recall further would make this worse, not better — the data is already there; what's missing is precision in what gets kept.
+
+**Key points:**
+- High recall + low precision = the answer is in there, but so is a lot of noise
+- This is a retrieval-tuning problem, not a "we're missing data" problem
+- Concrete fix #1: reduce `k` so fewer chunks reach the prompt
+- Concrete fix #2: add/tighten metadata filtering (Lesson 6) to narrow the candidate pool before scoring
+- Increasing recall here would be the wrong direction — it would add more noise, not fix the actual issue
+
+**Common mistake:** Reflexively reaching for "retrieve more" (bigger `k`) when precision is the problem — that moves the wrong lever and makes the noise worse, not better.
+
+---
