@@ -3,7 +3,6 @@ from __future__ import annotations
 from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
-from numpy import reciprocal
 
 from rag.config import settings
 from rag.retrieval.fusion import reciprocal_rank_fusion

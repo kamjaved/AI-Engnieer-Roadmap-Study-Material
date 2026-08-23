@@ -2,9 +2,11 @@ from langchain_core.documents import Document
 from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
 from langchain_pinecone import PineconeVectorStore
+from pinecone import Pinecone
 
 from rag.config import settings
 from rag.generation.prompt import prompt
+from rag.retrieval.reranker import rerank
 from rag.retrieval.retriever import retrieve
 
 
@@ -38,14 +40,32 @@ def answer_question(
     k: int = 5,
     team: str | None = None,
     doc_type: str | None = None,
+    # New optional reranking knobs (default off) preserve existing callers'
+    # behavior while allowing separate retrieval vs reranking tuning.
+    pc: Pinecone | None = None,
+    # `rerank_fetch_k` fetches a wider candidate pool than `k` for reranking.
+    rerank_fetch_k: int = 20,
+    use_reranking: bool = False,
 ) -> dict:
-    """
-    Full read path: retrieve -> format -> generate.
-    """
-    # Plain reuse of Lesson 6's retrieve() — no new retrieval logic
-    # written here. This function only orchestrates + generates.
 
-    scored_docs = retrieve(vector_store, question, k=k, team=team, doc_type=doc_type)
+    if use_reranking:
+        # Fail loud, not quiet — a caller that sets use_reranking=True
+        # but forgets pc gets a clear error right here, not a confusing
+        # AttributeError three lines into rerank().
+        if pc is None:
+            raise ValueError("pc (a Pinecone client) is required when use_reranking=True")
+
+        wide_docs = retrieve(
+            vector_store, question, k=rerank_fetch_k, team=team, doc_type=doc_type
+        )
+        scored_docs = rerank(pc, question, wide_docs, top_n=k)
+        # Retrieve WIDE (k=20), then rerank NARROW (top_n=k). Same
+        # "cast a wide net cheaply, then cut precisely" shape you
+        # already built for hybrid_retrieve() in Lesson 6.6 — just a
+        # cross-encoder doing the narrowing here instead of RRF.
+    else:
+        scored_docs = retrieve(vector_store, question, k=k, team=team, doc_type=doc_type)
+
     context = format_docs(scored_docs)
 
     # The dict keys here MUST match the prompt template's

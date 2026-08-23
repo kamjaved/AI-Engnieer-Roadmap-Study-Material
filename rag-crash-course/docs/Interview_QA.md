@@ -451,3 +451,50 @@ e.g., text-embedding-3-large = 3072 numbers vs. text-embedding-3-small = 1536 nu
 **Common mistake:** Reflexively reaching for "retrieve more" (bigger `k`) when precision is the problem — that moves the wrong lever and makes the noise worse, not better.
 
 ---
+
+## Lesson 10 — Common RAG Pitfalls & Optimization
+
+### Q1. Why can a reranker afford to be slower and more accurate than the initial retriever? What's structurally different about the job each one is doing?
+
+**Answer:** The initial retriever is a bi-encoder — it embeds the query and every chunk separately, so every chunk's embedding can be precomputed once, at index time. At query time it's just a fast vector-math comparison, which is why it can scale to a huge index. A reranker is a cross-encoder — it feeds the query and a chunk through the model *together*, so nothing can be precomputed; every (query, chunk) pair needs its own forward pass. That's too slow to run over an entire index, but cheap enough to run over the ~20 candidates the retriever already narrowed things down to.
+
+**Key points:**
+- Bi-encoder (retriever): embeds query and chunks separately → precomputed chunk embeddings, fast vector comparison at query time
+- Cross-encoder (reranker): scores query+chunk jointly → nothing precomputable, one forward pass per pair
+- Precomputation is *why* the bi-encoder scales to millions of vectors and the cross-encoder doesn't
+- Reranker only ever sees the retriever's narrowed candidate set (~15-25), never the full index
+- This is the standard two-stage retrieval pattern: cast a wide net cheaply, then rerank narrow and precisely
+
+**Common mistake:** Saying a reranker is "just more accurate" without explaining why it's slower — the real reason is architectural (joint scoring, no precomputation possible), not just "it's a bigger/better model."
+
+---
+
+### Q2. Why is "lost in the middle" a reason to rerank down to fewer chunks, rather than just a reason to write a better prompt?
+
+**Answer:** LLMs attend less to information buried in the middle of a long context and more to what's near the start or end — a positional effect, not a comprehension failure. A prompt-only fix can't address this, because the problem isn't the instructions, it's the amount and placement of context itself. Reranking fixes the *count* by narrowing many retrieved chunks down to the few most relevant ones. There's a second, separate lever — placement of the best chunk relative to the question — that reranking alone doesn't address; count and position are two independent fixes for the same underlying attention effect.
+
+**Key points:**
+- "Lost in the middle" is positional (start/end get more attention), not a model-comprehension problem
+- A prompt-wording fix can't help — the issue is context volume and layout, not instructions
+- Reranking's fix: fewer, higher-quality chunks reach the prompt (e.g. narrow from 20 to 5)
+- A second, separate lever exists: ordering the best chunk *closest to the question itself* — not just cutting the count
+- Both levers target the same root cause (attention bias), from two different angles
+
+**Common mistake:** Assuming a better-worded system prompt can compensate for a bloated, badly-ordered context — the fix has to happen at the retrieval/context-assembly stage, not the instruction stage.
+
+---
+
+### Q3. Why do reranking (Lesson 10) and query transformation (Lesson 6.5's HyDE) together make this pipeline "Advanced RAG," per Lesson 2's own definition?
+
+**Answer:** Lesson 2 defines Advanced RAG as Naive RAG plus targeted fixes at two specific points: pre-retrieval (fixing what goes *into* the search) and post-retrieval (fixing what comes *out* of it) — with the pipeline's overall linear shape unchanged. HyDE is the pre-retrieval fix: it rewrites a vague query into a fuller, document-shaped hypothetical answer before embedding, so the search itself starts from better input. Reranking is the post-retrieval fix: it re-scores and narrows the candidates a search already returned, before they reach generation. Together they cover both ends of the retrieval step without changing its shape.
+
+**Key points:**
+- Lesson 2's Advanced RAG = Naive RAG + pre-retrieval fix + post-retrieval fix, same linear pipeline shape
+- HyDE (Lesson 6.5) = pre-retrieval: improves the query before it's embedded/searched
+- Reranking (Lesson 10) = post-retrieval: improves the ranking/selection of what search already returned
+- Neither technique changes the pipeline's straight-line shape — that's *why* it's still "Advanced," not "Modular" or "Agentic"
+- Between them, they cover both ends of the retrieval step — nothing is fixed mid-retrieval, because there is no mid-retrieval step in this architecture
+
+**Common mistake:** Calling any RAG system with extra features "Advanced RAG" without being able to name which specific stage — pre- or post-retrieval — each feature actually targets.
+
+---

@@ -3,6 +3,7 @@
 import numpy as np
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
+from pinecone import Pinecone
 from ragas import EvaluationDataset, evaluate
 from ragas.embeddings import LangchainEmbeddingsWrapper
 from ragas.llms import LangchainLLMWrapper
@@ -24,7 +25,12 @@ METRIC_INTERPRETATIONS = {
 
 
 def build_eval_dataset(
-    vector_store: PineconeVectorStore, qa_pairs: list[dict]
+    vector_store: PineconeVectorStore,
+    qa_pairs: list[dict],
+    #  NEW PARAMS DECLRATION TO SUPPORT RE RANKING
+    use_reranking: bool = False,
+    pc: Pinecone | None = None,
+    rerank_fetch_k: int = 20,
 ) -> EvaluationDataset:
     """
     Runs every hand-written QA pair through the REAL pipeline
@@ -41,7 +47,13 @@ def build_eval_dataset(
     for pair in qa_pairs:
         # Same call your API makes. Default k=5, no team/doc_type
         # filter — matches how a real, unscoped user query behaves.
-        result = answer_question(vector_store, pair["question"])
+        result = answer_question(
+            vector_store,
+            pair["question"],
+            use_reranking=use_reranking,
+            pc=pc,
+            rerank_fetch_k=rerank_fetch_k,
+        )
 
         rows.append(
             {
@@ -84,7 +96,6 @@ def evaluate_pipeline(dataset) -> None:
         llm=evaluator_llm,
         embeddings=evaluator_embeddings,
     )
-
     print("\n--- Ragas Evaluation Summary ---")
     for metric_name, interpretation in METRIC_INTERPRETATIONS.items():
         # results[metric_name] returns the list of per-question scores;
