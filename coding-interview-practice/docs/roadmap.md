@@ -2,8 +2,26 @@
 
 **Target profile:** Python developer / AI–GenAI engineer, ~2–3 years of practical Python experience
 **Goal:** Pass coding rounds, live-coding screens, snippet/debug rounds and "practical Python" challenges
-**Created:** 2026-08-25
+**Created:** 2026-08-25 · **Updated:** 2026-08-26 (added starter skeletons + per-question sources, loosened constraints)
 **Rule:** No solutions in this file. Solve first, review after.
+
+**How to read the constraints below:** where a question says "avoid X" or "without Y," that
+restriction exists to force practice of a specific mechanism — it is the point of the exercise,
+not a rule I'm grading you against. Solve it however makes sense to you; if you take a different
+route than the one described, that's a legitimate answer and we'll compare trade-offs in review,
+not treat it as wrong. The one thing I will push back on is skipping the constraint *silently* —
+say out loud (or in a comment) if you deliberately went a different way and why.
+
+**Starter skeletons:** every question below has a fixed function name and signature so you don't
+burn time deciding names or argument order. Everything inside the function — helper functions,
+loop structure, which built-ins you reach for — is entirely yours. Treat the skeleton as the
+interface an interviewer would hand you on a shared doc, not as a specification of the algorithm.
+
+**Sources:** every question has a `Source:` line. Where I found a specific, documented company
+attribution (a real interview report, a company-tagged problem list), it's named explicitly with
+a link. Where a pattern is common across many general "Python interview questions" lists but I
+could not verify a specific company asked *this exact* framing, I say so plainly instead of
+inventing one — treat those as "commonly recommended practice," not "confirmed asked at X."
 
 ---
 
@@ -26,10 +44,17 @@ actually being asked right now:
   implement text chunking with overlap without LangChain, token counting, batching, retry with
   exponential backoff, structured/JSON output validation, streaming, and caching. These are
   ordinary Python problems wearing an AI costume — which is exactly why they belong here.
+- **Company attribution pass (2026-08-26 update):** a second research pass specifically hunted
+  for verified company tags — real onsite/OA reports, company-tagged problem databases (Hello
+  Interview, 1Point3Acres, jointaro, igotanoffer's Glassdoor-sourced Amazon list), and named
+  interview playbooks (Amazon GenAI, Anthropic AI engineering). Where a question in this roadmap
+  matches one of those verified reports closely, the company is named in that question's
+  `Source:` line. Most Level 1–2 questions are foundational patterns that appear everywhere and
+  are not tied to one company's leaked interview — that's stated honestly rather than guessed.
 
 The 30 questions below are ordered so each one reuses something you built in an earlier one.
 
-**Sources:** [InterviewBit](https://www.interviewbit.com/python-interview-questions/) ·
+**General sources:** [InterviewBit](https://www.interviewbit.com/python-interview-questions/) ·
 [DataCamp](https://www.datacamp.com/blog/top-python-interview-questions-and-answers) ·
 [CodingInterview.com](https://www.codinginterview.com/guide/python-coding-interview-questions-and-answers/) ·
 [DataInterview – Top 100 Python Questions](https://www.datainterview.com/blog/top-100-python-interview-questions) ·
@@ -37,7 +62,12 @@ The 30 questions below are ordered so each one reuses something you built in an 
 [The AI Engineer Interview Playbook (dev.to)](https://dev.to/truongpx396/the-ai-engineer-interview-playbook-45pb) ·
 [GenAI Engineer Interview Questions 2026](https://cloudsoftsol.com/blog/genai-engineer-interview-questions-2026/) ·
 [Let's Data Science – 50 AI Engineer Questions](https://letsdatascience.com/blog/50-llm-and-ai-engineer-interview-questions-for-2026) ·
-[AI-Engineer-Interview-Questions (GitHub)](https://github.com/ombharatiya/AI-Engineer-Interview-Questions)
+[AI-Engineer-Interview-Questions (GitHub)](https://github.com/ombharatiya/AI-Engineer-Interview-Questions) ·
+[Hello Interview – Two Sum](https://www.hellointerview.com/community/questions/leetcode-two-sum/cm5eh7nrh04n1838os7sfzdx9) ·
+[igotanoffer – 49 confirmed Amazon coding interview questions](https://igotanoffer.com/blogs/tech/amazon-coding-interview-questions) ·
+[fastprep.io – Group Anagrams (Amazon onsite)](https://www.fastprep.io/problems/amazon-group-anagrams) ·
+[openagenthub.io – Coding Rounds by company](https://openagenthub.io/interview/coding-rounds/) ·
+[velocode.ai – Anthropic retry/backoff question](https://velocode.ai/practice/resilient-llm-api-calls-with-exponential-backoff-retry-logic)
 
 ---
 
@@ -84,6 +114,18 @@ Output: "systems AI production build I"
 Implement both. Then answer out loud: what happens with multiple spaces between words
 (`"a    b"`), and with leading/trailing whitespace?
 
+**Starter skeleton**
+```python
+def reverse_string(text: str) -> str:
+    """Reverse the characters of a string."""
+    ...
+
+
+def reverse_word_order(sentence: str) -> str:
+    """Reverse the order of words in a sentence."""
+    ...
+```
+
 **Concept / pattern tested**
 String slicing with a negative step, `str.split()`, `str.join()`, immutability of strings.
 
@@ -93,6 +135,12 @@ whether you reach for `[::-1]` and `split()/join()` naturally, or start writing 
 index loop like a C programmer. In AI work you touch text constantly — clean string handling
 is the base layer under every prompt builder, parser and chunker.
 
+**Source:** General warm-up pattern appearing across nearly every "Python interview questions,
+2–3 years experience" list reviewed — [InterviewBit](https://www.interviewbit.com/python-interview-questions/),
+[DataCamp](https://www.datacamp.com/blog/top-python-interview-questions-and-answers). Not tied
+to one specific company's leaked interview in the sources found — treat as a universal warm-up
+rather than a company-confirmed question.
+
 ---
 
 ## Q2. Count character frequency using a plain dictionary
@@ -101,7 +149,8 @@ is the base layer under every prompt builder, parser and chunker.
 
 **Problem statement**
 Given a string, return a dictionary mapping each character to the number of times it appears.
-Ignore case. **Do not use `collections.Counter` for this one** — write the counting loop by hand.
+Ignore case. Try it first **without** `collections.Counter` — write the counting loop by hand;
+that's the actual point of this one.
 
 **Example**
 ```
@@ -113,6 +162,18 @@ Output: {'h': 1, 'e': 1, 'l': 2, 'o': 1}
 Solve it with `dict.get()` and then again with `dict.setdefault()`. Explain the difference
 between the two, and why `dict[key] += 1` fails on a missing key.
 
+**Starter skeleton**
+```python
+def char_frequency(text: str) -> dict[str, int]:
+    """Count characters case-insensitively, without Counter."""
+    ...
+
+
+def char_frequency_stdlib(text: str) -> dict[str, int]:
+    """Same result using collections.Counter."""
+    ...
+```
+
 **Concept / pattern tested**
 Dictionary as a counter, `get()` vs `setdefault()` vs `KeyError`, O(1) average hash lookup.
 
@@ -122,6 +183,11 @@ first-unique-character, top-K, word counts and duplicate detection are all this 
 disguise. Interviewers deliberately ban `Counter` first, then ask you to redo it with `Counter`,
 to see if you understand what the library is doing for you.
 
+**Source:** General pattern — "count frequency of elements" appears as a named item across
+[DataInterview's Top 100](https://www.datainterview.com/blog/top-100-python-interview-questions)
+and [InterviewBit](https://www.interviewbit.com/python-interview-questions/). Not company-tagged
+in the sources reviewed.
+
 ---
 
 ## Q3. Find the second largest number in a list without sorting
@@ -129,9 +195,11 @@ to see if you understand what the library is doing for you.
 **Difficulty:** Beginner
 
 **Problem statement**
-Given a list of integers, return the second largest **distinct** value. You may not call
-`sorted()`, `list.sort()`, `max()` more than once conceptually, or convert to a set to cheat
-the logic — do it in a single pass with two variables.
+Given a list of integers, return the second largest **distinct** value. The interesting version
+of this exercise avoids `sorted()`, `list.sort()`, and converting to a set — a single pass with
+two running variables is the mechanism being practiced. If you reach for `sorted(set(...))`
+first, that's a legitimate production answer (see Q3's review notes on when each is right) —
+just also do the single-pass version, since that's what a live round will actually ask for.
 
 **Example**
 The function returns the **number itself**, not a formatted sentence.
@@ -147,6 +215,13 @@ Input:  [-5, -2, -9]         ->  -5      # -2 is largest, -5 is second
 Handle these edge cases explicitly: empty list, single element, all elements equal,
 negative numbers.
 
+**Starter skeleton**
+```python
+def find_second_largest(numbers: list[int]) -> int | None:
+    """Return the second largest distinct value, or None if there isn't one."""
+    ...
+```
+
 **Concept / pattern tested**
 Single-pass scanning, tracking two running values, edge-case discipline, why
 `float('-inf')` is a safer initial value than `0`.
@@ -156,6 +231,10 @@ It is the classic "can you think without reaching for a built-in" question. Most
 sort in O(n log n); the interviewer wants the O(n) single pass. The real signal is whether you
 volunteer the edge cases before being asked — that is what separates 2–3 years of experience
 from a fresher.
+
+**Source:** General pattern, widely recommended across Python/DSA prep sites as a "no built-in
+shortcut" warm-up. No specific company attribution found in the sources reviewed for this exact
+framing.
 
 ---
 
@@ -177,6 +256,18 @@ Output: ["doc3", "doc1", "doc2"]
 Write it with an explicit `seen` set first. Then write the idiomatic one-liner using
 `dict.fromkeys()`. Explain why `list(set(items))` is the wrong answer here.
 
+**Starter skeleton**
+```python
+def remove_duplicates(items: list) -> list:
+    """Remove duplicates, preserving first-seen order. Does not mutate the input."""
+    ...
+
+
+def remove_duplicates_fast(items: list) -> list:
+    """Same result, idiomatic one-liner."""
+    ...
+```
+
 **Concept / pattern tested**
 Set membership as O(1) lookup, insertion-ordered dicts (Python 3.7+), the order-vs-speed
 trade-off.
@@ -185,6 +276,11 @@ trade-off.
 Interviewers love this one because the naive answer (`list(set(...))`) is *almost* right and
 silently destroys ordering. In a RAG pipeline you dedupe retrieved chunk IDs constantly, and
 order there is relevance order — losing it is a real production bug, not a trivia point.
+
+**Source:** Listed directly as item #1 in [DataInterview's Top 100 Python Interview
+Questions](https://www.datainterview.com/blog/top-100-python-interview-questions) ("How do you
+remove duplicates from a list while maintaining order?"). Not tied to a specific company report
+in the sources reviewed.
 
 ---
 
@@ -208,6 +304,13 @@ Output: {"model": "gpt-4o", "temperature": 0.2, "max_tokens": 512}
 Implement with `dict(zip(...))`. Then demonstrate what `zip()` does on unequal lengths, and
 show how `zip(..., strict=True)` (Python 3.10+) turns a silent truncation into a loud error.
 
+**Starter skeleton**
+```python
+def combine_key_value(keys: list, values: list) -> dict:
+    """Pair keys with values positionally. Decide how to handle a length mismatch."""
+    ...
+```
+
 **Concept / pattern tested**
 `zip()` semantics, lazy iterators, `dict()` construction from pairs, fail-fast design.
 
@@ -215,6 +318,12 @@ show how `zip(..., strict=True)` (Python 3.10+) turns a silent truncation into a
 `zip()` is a top-5 "do you actually write Python" tell. The `strict=True` follow-up is the
 modern part most candidates miss — silent truncation of mismatched data is exactly the kind of
 bug that corrupts an embedding batch where vectors and IDs get out of alignment.
+
+**Source:** General pattern — `dict(zip(keys, values))` is used as the canonical example in
+[PythonGuides' 200+ Python Interview Questions](https://pythonguides.com/python-interview-questions-and-answers/)
+(#44). `zip(..., strict=True)` is a Python 3.10+ language feature, documented in the
+[official Python docs](https://docs.python.org/3/library/functions.html#zip); no company
+attribution found for this specific framing.
 
 ---
 
@@ -224,7 +333,9 @@ bug that corrupts an embedding batch where vectors and IDs get out of alignment.
 
 **Problem statement**
 Given a list and a target value, return a list of **all** indices where the target appears.
-Then produce a human-readable numbered listing starting at 1.
+Then produce a human-readable numbered listing starting at 1. These are two separate outputs —
+you decide whether that means two separate functions or one function returning both; there's a
+real design opinion buried in that choice (see the Q6 review notes on single responsibility).
 
 **Example**
 ```
@@ -243,6 +354,18 @@ Numbered listing:
 Solve with `enumerate()` inside a list comprehension. Use the `start=` parameter for the
 numbered listing. Explain why `for i in range(len(items))` is considered unidiomatic.
 
+**Starter skeleton**
+```python
+def find_all_indices(items: list, target) -> list[int]:
+    """Return every index where items[i] == target."""
+    ...
+
+
+def numbered_listing(items: list, start: int = 1) -> str:
+    """Format items as a 1-indexed, newline-joined listing."""
+    ...
+```
+
 **Concept / pattern tested**
 `enumerate()` including its `start` argument, comprehension with a condition, index-vs-value
 iteration.
@@ -251,6 +374,11 @@ iteration.
 `list.index()` only returns the first match — interviewers use this to see if you notice that.
 `enumerate` also appears in nearly every real loop you'll write over chunks, messages or
 retrieved documents where you need both the position and the item.
+
+**Source:** `enumerate()` and its `start` parameter are covered as a named topic across general
+Python interview lists (e.g. [DataInterview](https://www.datainterview.com/blog/top-100-python-interview-questions),
+item #2: "What is the purpose of the `enumerate()` function?"). Not tied to a specific company
+report.
 
 ---
 
@@ -273,6 +401,18 @@ Output: ["rag", "langgraph", "vector db"]
 Write it as a single list comprehension. Then write the same thing as an explicit `for` loop
 and say which version you would put in a production codebase and why.
 
+**Starter skeleton**
+```python
+def clean_tags(tags: list[str]) -> list[str]:
+    """Strip, lowercase, and drop empty or too-short tags. Single comprehension."""
+    ...
+
+
+def clean_tags_loop(tags: list[str]) -> list[str]:
+    """Same logic as an explicit for loop."""
+    ...
+```
+
 **Concept / pattern tested**
 List comprehension with transform + filter, order of operations inside a comprehension,
 readability limits of comprehensions.
@@ -281,6 +421,11 @@ readability limits of comprehensions.
 Comprehensions are the number-one thing interviewers scan for. But the real question underneath
 is judgement: a candidate who crams four transformations into one unreadable comprehension is
 showing off, not engineering. Say the trade-off out loud.
+
+**Source:** General pattern. Comprehension fluency is called out explicitly as the top thing
+interviewers scan for in [Generalist Programmer's worked-examples
+guide](https://generalistprogrammer.com/tutorials/python-interview-questions). Not tied to a
+specific company report.
 
 ---
 
@@ -310,6 +455,13 @@ Solve it twice: once with a plain dict (reusing your Q2 pattern), once with
 have the same count, what order do they come out in, and how would you force alphabetical order
 on ties?
 
+**Starter skeleton**
+```python
+def top_n_words(text: str, n: int) -> list[tuple[str, int]]:
+    """Return the n most frequent words as (word, count) pairs, descending by count."""
+    ...
+```
+
 **Concept / pattern tested**
 `Counter`, `most_common()`, text normalisation, tie-breaking in sorts.
 
@@ -317,6 +469,11 @@ on ties?
 This is the most-repeated "practical Python" question across every interview bank. For AI roles
 it doubles as a stand-in for token/term statistics — the same shape as counting tokens, building
 a BM25 term index, or profiling a corpus before chunking it.
+
+**Source:** General pattern, related closely to LeetCode's numeric "Top K Frequent Elements,"
+which [InterviewBit](https://www.interviewbit.com/python-interview-questions/) presents as item
+#7 with a `Counter.most_common(k)` solution. This word-frequency variant is the text-flavored
+twin of that same idea; no company tag found for the word-frequency framing specifically.
 
 ---
 
@@ -338,6 +495,13 @@ Output: [0, 1]
 Write the brute-force O(n²) version, state its complexity out loud, then rewrite it as a single
 pass using a dictionary of `value -> index`. Explain what the dictionary is actually storing.
 
+**Starter skeleton**
+```python
+def two_sum(nums: list[int], target: int) -> list[int]:
+    """Return the indices of two numbers that add up to target."""
+    ...
+```
+
 **Concept / pattern tested**
 The complement / hash-map lookup pattern, trading space for time, O(n²) → O(n).
 
@@ -346,6 +510,16 @@ It is the canonical demonstration that a dict turns a nested loop into a single 
 every "optimise this" follow-up in a Python round is a variation of this same move, so
 interviewers use it as a baseline check. Narrating the brute force *and then* improving it is
 half the grade.
+
+**Source:** This is LeetCode #1, one of the most extensively company-documented questions that
+exists. Confirmed asked at **Google, Amazon, Microsoft, and Meta**
+([YouTube walkthrough citing all four](https://www.youtube.com/watch?v=wU6xQSRoobg)), plus
+recent 2026 reports at **Brex, JPMorgan Chase, and ServiceNow**
+([Hello Interview's tracked question timeline](https://www.hellointerview.com/community/questions/leetcode-two-sum/cm5eh7nrh04n1838os7sfzdx9)).
+igotanoffer's dataset of 250+ real Glassdoor Amazon interview reports also lists it as
+[confirmed Amazon question #1](https://igotanoffer.com/blogs/tech/amazon-coding-interview-questions).
+A Reddit thread from r/leetcode independently corroborates it as a common FAANG warm-up with
+follow-ups into 3Sum/4Sum.
 
 ---
 
@@ -368,6 +542,18 @@ Implement it with sorting, and again with frequency counting. Then compare: time
 space complexity, and which you would choose for very long strings versus a huge number of
 short strings.
 
+**Starter skeleton**
+```python
+def is_anagram_sorted(a: str, b: str) -> bool:
+    """Anagram check via sorting."""
+    ...
+
+
+def is_anagram_counting(a: str, b: str) -> bool:
+    """Anagram check via frequency counting."""
+    ...
+```
+
 **Concept / pattern tested**
 `sorted()` on strings, `Counter` equality, O(n log n) vs O(n) reasoning.
 
@@ -375,6 +561,11 @@ short strings.
 The point of this question is not the answer — it's the comparison. Interviewers ask it to hear
 you weigh two correct solutions, which is exactly the "discuss trade-offs" signal they are
 grading experienced candidates on.
+
+**Source:** The pairwise anagram check is the simpler building block behind LeetCode's "Group
+Anagrams," which is independently confirmed asked at **Amazon, Google, Facebook (Meta), and
+Microsoft** — see Q15's sources below for the direct company evidence. No separate company
+attribution found for the standalone pairwise-check framing used here.
 
 ---
 
@@ -401,6 +592,13 @@ symmetric  -> {"doc1", "doc2", "doc5"}
 Use `&`, `-`, `^` (and their method equivalents `intersection`, `difference`,
 `symmetric_difference`). Then explain why a list of dictionaries cannot go into a set directly.
 
+**Starter skeleton**
+```python
+def compare_collections(a: list, b: list) -> dict[str, set]:
+    """Return {'common': ..., 'only_in_a': ..., 'symmetric_diff': ...}."""
+    ...
+```
+
 **Concept / pattern tested**
 Set algebra, hashability, why sets are unordered, converting back to an ordered list.
 
@@ -408,6 +606,10 @@ Set algebra, hashability, why sets are unordered, converting back to an ordered 
 Set operations are the fastest correct answer to a whole family of "compare two collections"
 questions, and candidates who loop manually instead stand out badly. The hashability follow-up
 (`unhashable type: 'dict'`) is a very common live-coding stumble.
+
+**Source:** General pattern. Set algebra operators (`&`, `-`, `^`) are documented Python
+language features covered across general interview prep content; no specific company
+attribution found for this exact framing.
 
 ---
 
@@ -434,6 +636,13 @@ Use `sorted()` with `key=` and `reverse=True`. Then rewrite the key using
 `operator.itemgetter`. State the difference between `sorted()` and `list.sort()`, and what each
 one returns.
 
+**Starter skeleton**
+```python
+def sort_by_score(docs: list[dict], descending: bool = True) -> list[dict]:
+    """Sort documents by their 'score' field. Returns a new list."""
+    ...
+```
+
 **Concept / pattern tested**
 `key=` functions, `lambda`, `reverse=`, `operator.itemgetter`, in-place vs new list.
 
@@ -442,6 +651,12 @@ Custom sorting is asked in some form in nearly every Python round. The `sorted()
 return-value gotcha (`.sort()` returns `None`) catches a surprising number of experienced
 candidates. Ranking retrieved chunks by score is also the single most common sort you'll write
 in a RAG system.
+
+**Source:** General pattern, covered extensively in
+[freeCodeCamp's "Lambda Sorted in Python"](https://www.freecodecamp.org/news/lambda-sort-list-in-python)
+and this heavily-upvoted
+[Stack Overflow thread on sorting with lambda](https://stackoverflow.com/questions/3766633/how-to-sort-with-lambda-in-python).
+Not tied to a specific company report.
 
 ---
 
@@ -463,6 +678,18 @@ Part B: [1, [2, [3, [4, 5]], 6], 7]  -> [1, 2, 3, 4, 5, 6, 7]
 Solve Part A with a nested comprehension and again with `itertools.chain.from_iterable`.
 Solve Part B with recursion. Then discuss: what breaks if the nesting is 10,000 levels deep?
 
+**Starter skeleton**
+```python
+def flatten_one_level(nested: list[list]) -> list:
+    """Flatten a list of lists exactly one level."""
+    ...
+
+
+def flatten_deep(nested: list) -> list:
+    """Flatten a list nested to arbitrary depth, recursively."""
+    ...
+```
+
 **Concept / pattern tested**
 Nested comprehensions and their reading order, `itertools.chain`, recursion, Python's recursion
 limit (~1000 frames).
@@ -471,6 +698,10 @@ limit (~1000 frames).
 Part A tests comprehension fluency; Part B tests whether you can write a clean recursive
 function under pressure. The recursion-limit follow-up is how the interviewer distinguishes
 "knows recursion" from "knows recursion has a cost".
+
+**Source:** Listed directly as item #4 in [DataInterview's Top 100 Python Interview
+Questions](https://www.datainterview.com/blog/top-100-python-interview-questions) ("How do you
+flatten a nested list in Python?"). Not tied to a specific company report.
 
 ---
 
@@ -502,6 +733,18 @@ Explain *precisely* why the output is wrong — trace the index pointer step by 
 two correct fixes: one that builds a new list, and one that mutates the original list in place
 (the caller may be holding a reference to it).
 
+**Starter skeleton**
+```python
+def remove_evens_new_list(numbers: list[int]) -> list[int]:
+    """Fix #1: return a new list, don't touch the original."""
+    ...
+
+
+def remove_evens_in_place(numbers: list[int]) -> None:
+    """Fix #2: mutate the caller's list in place via slice assignment."""
+    ...
+```
+
 **Concept / pattern tested**
 Iterator invalidation, how `for` loops track position by index internally, `list.remove()` being
 O(n) and value-based, in-place mutation via slice assignment (`numbers[:] = ...`).
@@ -510,6 +753,14 @@ O(n) and value-based, in-place mutation via slice assignment (`numbers[:] = ...`
 Your first debugging-round question. Interviewers ask this because the bug is silent — no
 exception, just wrong data. Being able to *trace* rather than *guess* is the whole point, and
 "build a new list vs mutate in place" is a genuine API-design decision, not a style preference.
+
+**Source:** This exact trap — mutating a list while iterating over it — is a widely documented
+Python pitfall (noted in [Python's own tutorial on data
+structures](https://docs.python.org/3/tutorial/datastructures.html) as a reason to copy before
+mutating) and appears in "tricky Python questions" interview content such as
+[dev.to's Tricky Python Questions](https://dev.to/tomeraitz/tricky-python-questions-45gg). The
+specific `remove_evens` example here is illustrative, not pulled from one company's leaked
+interview.
 
 ---
 
@@ -544,6 +795,18 @@ Output: {"pdf": [d1, d3], "web": [d2]}
 Solve with `dict.setdefault()`, then with `collections.defaultdict(list)`. Then look at
 `itertools.groupby` and explain the trap: why does it give the wrong answer on unsorted input?
 
+**Starter skeleton**
+```python
+def group_anagrams(words: list[str]) -> list[list[str]]:
+    """Group words that are anagrams of each other."""
+    ...
+
+
+def group_by_field(records: list[dict], field: str) -> dict[str, list[dict]]:
+    """Group dict records by the value of a given field."""
+    ...
+```
+
 **Concept / pattern tested**
 The group-by-key pattern, `defaultdict`, choosing a canonical key (sorted string / tuple),
 `itertools.groupby` requiring pre-sorted input.
@@ -553,6 +816,15 @@ The group-by-key pattern, `defaultdict`, choosing a canonical key (sorted string
 something you write weekly in real work — grouping chunks by document, messages by session,
 errors by type. The `groupby` trap is a favourite follow-up because so many people assume it
 behaves like SQL `GROUP BY`.
+
+**Source:** "Group Anagrams" (LeetCode #49) is confirmed asked at **Amazon** via a real onsite
+interview report on [fastprep.io](https://www.fastprep.io/problems/amazon-group-anagrams) and
+independently logged on [1Point3Acres' Amazon question
+tracker](https://www.1point3acres.com/interview/problems/company/amazon/group-anagrams-lc-49)
+(last reported asked 2026-08-14). More broadly tagged as asked at **Amazon, Google, Facebook,
+and Microsoft** by [TechInView](https://www.techinview.dev/practice/group-anagrams) and
+[jointaro.com](https://www.jointaro.com/interviews/questions/group-anagrams/?company=amazon).
+The Part B "group by field" variant is a general practical pattern with no separate company tag.
 
 ---
 
@@ -579,6 +851,13 @@ Build a tuple key. Handle the hard part: you cannot pass `reverse=True` because 
 two fields is reversed — find the two standard ways around this. Then explain what "stable sort"
 means and how stability lets you solve this with two passes instead.
 
+**Starter skeleton**
+```python
+def sort_results(results: list[dict]) -> list[dict]:
+    """Sort by score descending, then title ascending on ties."""
+    ...
+```
+
 **Concept / pattern tested**
 Tuple keys, negating a numeric key vs relying on sort stability, `functools.cmp_to_key` as the
 escape hatch, Timsort stability guarantees.
@@ -587,6 +866,11 @@ escape hatch, Timsort stability guarantees.
 Single-key sorting is Easy; mixed-direction multi-key sorting is where candidates actually
 struggle. It's also a genuinely common requirement — reranking retrieved results by relevance
 then recency is exactly this shape.
+
+**Source:** General pattern. Multi-key sorting with mixed directions is a well-documented Python
+technique (see [GeeksforGeeks on sorting by multiple
+keys](https://www.geeksforgeeks.org/python/python-program-to-sort-the-list-according-to-the-column-using-lambda)),
+but no specific company attribution was found for this exact framing.
 
 ---
 
@@ -609,6 +893,13 @@ Input:  "leetcode" -> "l"  (index 0)
 Solve in two passes: count, then scan. Explain why one pass is not enough. Then answer: does
 your solution still work correctly if the input is a generator instead of a string, and why not?
 
+**Starter skeleton**
+```python
+def first_unique_char(text: str) -> str | None:
+    """Return the first character that appears exactly once, or None."""
+    ...
+```
+
 **Concept / pattern tested**
 Two-pass counting, dict insertion order guaranteeing "first", the difference between a
 re-iterable sequence and a one-shot iterator.
@@ -617,6 +908,10 @@ re-iterable sequence and a one-shot iterator.
 It looks like Q2 but adds an ordering requirement that trips people up. The generator follow-up
 is how interviewers check whether you understand iterator exhaustion — which matters directly
 when you're streaming LLM tokens and try to loop over the stream twice.
+
+**Source:** Listed directly as item #5 ("First Non-Repeating Character") in
+[InterviewBit's Python Interview Questions](https://www.interviewbit.com/python-interview-questions/),
+with the exact two-pass dictionary approach shown. Not tied to a specific company report.
 
 ---
 
@@ -640,6 +935,13 @@ Output: [[1,5]]        # touching counts as overlapping
 Sort by start, then sweep. Handle: unsorted input, intervals that touch exactly at a boundary,
 and one interval fully contained inside another.
 
+**Starter skeleton**
+```python
+def merge_intervals(intervals: list[list[int]]) -> list[list[int]]:
+    """Merge all overlapping intervals, returning them sorted by start."""
+    ...
+```
+
 **Concept / pattern tested**
 Sort-then-sweep, tracking a running "current" interval, `max()` on the end boundary,
 inclusive-vs-exclusive boundary reasoning.
@@ -648,6 +950,12 @@ inclusive-vs-exclusive boundary reasoning.
 The most-asked non-trivial list problem in Python rounds, and the closest thing to real DSA in
 this roadmap — included because it appears constantly. The boundary-condition discussion
 (does `[1,4]` overlap `[4,5]`?) is where interviewers separate careful engineers from fast ones.
+
+**Source:** "Merge Intervals" (LeetCode #56) appears as **confirmed Amazon interview question
+#12** in [igotanoffer's dataset of 250+ real Glassdoor-sourced Amazon interview
+reports](https://igotanoffer.com/blogs/tech/amazon-coding-interview-questions). Also presented
+with a worked solution as item #1 in
+[InterviewBit's Python Interview Questions](https://www.interviewbit.com/python-interview-questions/).
 
 ---
 
@@ -672,6 +980,18 @@ Write the loop yourself first. Get the `mid` calculation and the `while low <= h
 right — this is where everyone introduces an off-by-one. Then replace Part B with
 `bisect.bisect_left` / `bisect_right` and explain the difference between them.
 
+**Starter skeleton**
+```python
+def binary_search(sorted_items: list[int], target: int) -> int:
+    """Return the index of target in a sorted list, or -1 if absent."""
+    ...
+
+
+def insertion_point(sorted_scores: list[float], threshold: float) -> int:
+    """Return how many scores are strictly below threshold, using bisect."""
+    ...
+```
+
 **Concept / pattern tested**
 Binary search invariants, off-by-one discipline, the `bisect` module, O(log n) vs O(n).
 
@@ -679,6 +999,12 @@ Binary search invariants, off-by-one discipline, the `bisect` module, O(log n) v
 Binary search is the one search algorithm you're expected to write from memory at 2–3 years.
 The `bisect` half tests standard-library breadth — knowing it exists is a strong "experienced
 Python developer" signal, since most candidates hand-roll it.
+
+**Source:** General fundamental — binary search is listed among core "algorithms" categories in
+[CodingInterview.com's Python coding interview
+guide](https://www.codinginterview.com/guide/python-coding-interview-questions-and-answers/).
+It is a near-universal DSA requirement rather than a question tied to one company's specific
+leaked interview; no single-company attribution found in this research pass.
 
 ---
 
@@ -701,6 +1027,18 @@ Implement with slicing and `range(0, len(items), n)`. Then write a **generator**
 yields batches lazily instead of building the whole list. Then discuss: what should happen for
 `n = 0` or a negative `n`?
 
+**Starter skeleton**
+```python
+def batch(items: list, n: int) -> list[list]:
+    """Split items into chunks of at most n, building the full list of batches."""
+    ...
+
+
+def batch_lazy(items: list, n: int):
+    """Same idea, but yield each batch lazily instead of building them all."""
+    ...
+```
+
 **Concept / pattern tested**
 Strided `range`, list slicing (and why slicing past the end doesn't raise), generator functions,
 input validation.
@@ -710,6 +1048,12 @@ Batching is one of the most common practical tasks in AI engineering — you bat
 an embeddings API, batch rows for a vector-DB upsert, batch requests to stay under rate limits.
 The generator version is the follow-up that shows you're thinking about memory, and it sets up
 Q24. (Python 3.12+ has `itertools.batched` — knowing that exists is a bonus point.)
+
+**Source:** General practical pattern from data/ML pipeline coding tasks, not tied to a specific
+company in the sources reviewed. Thematically adjacent to coding challenge #11 ("Rate Limiter &
+Retry — token bucket, exponential backoff with jitter") in the [AI-Engineer-Interview-Questions
+repo](https://github.com/ombharatiya/AI-Engineer-Interview-Questions), which covers the same
+"process items in controlled groups" family of problems.
 
 ---
 
@@ -732,6 +1076,13 @@ Start with the brute force and state its complexity. Then build the sliding wind
 `seen` dict mapping character → last index. The hard part: when you find a repeat, where exactly
 does the left pointer move to, and why can it never move backwards?
 
+**Starter skeleton**
+```python
+def longest_unique_substring(text: str) -> int:
+    """Return the length of the longest substring with no repeated character."""
+    ...
+```
+
 **Concept / pattern tested**
 Sliding window with two pointers, using a dict for last-seen positions, maintaining a window
 invariant, O(n) with O(k) space.
@@ -740,6 +1091,11 @@ invariant, O(n) with O(k) space.
 The archetypal sliding-window question and the most common "medium" in Python screens. Sliding
 windows also show up directly in GenAI work — every rolling context window and every overlapping
 text chunker is this pattern, which is why it sits right before Q27.
+
+**Source:** This is LeetCode #3, one of the most frequently cited "top medium" questions across
+general DSA prep content. This research pass did not turn up a specific verified company
+attribution for it (unlike Q9, Q15, and Q18) — treat it as a widely-recommended fundamental
+rather than a company-confirmed report.
 
 ---
 
@@ -772,6 +1128,18 @@ Write it recursively with a `prefix` accumulator. Then handle the follow-up: wha
 when a value is a *list* of dicts? Decide on a convention (e.g. `items.0.name`) and justify it.
 Bonus: write the inverse function that un-flattens.
 
+**Starter skeleton**
+```python
+def flatten_dict(nested: dict, prefix: str = "") -> dict:
+    """Flatten a nested dict into dotted-path keys."""
+    ...
+
+
+def unflatten_dict(flat: dict) -> dict:
+    """Bonus: invert flatten_dict."""
+    ...
+```
+
 **Concept / pattern tested**
 Recursion over dicts, accumulator parameters, `isinstance` type dispatch, designing a key
 convention.
@@ -781,6 +1149,9 @@ Config flattening and JSON path extraction come up constantly in real Python wor
 engineering specifically when you're normalising provider responses, logging structured traces,
 or writing nested model output to a flat metrics store. It also tests recursion on a shape
 that isn't a list.
+
+**Source:** General practical pattern seen in config-handling and JSON-normalisation coding
+tasks. Not tied to a specific company report in the sources reviewed.
 
 ---
 
@@ -826,6 +1197,15 @@ For A: explain *when* default arguments are evaluated, and give the `None`-senti
 For B: explain reference semantics one level down, and when `copy.deepcopy` is the right call
 versus when it's an expensive mistake.
 
+**Starter skeleton**
+```python
+def add_message_fixed(text: str, history: list[str] | None = None) -> list[str]:
+    """Fixed version of Snippet A — no shared mutable default."""
+    ...
+```
+*(Snippet B is a predict-and-explain exercise — no function to write, just trace it and say
+what you'd change.)*
+
 **Concept / pattern tested**
 Function-definition-time vs call-time evaluation, the `None` sentinel idiom, shallow vs deep
 copy, mutable vs immutable values, reference sharing.
@@ -834,6 +1214,13 @@ copy, mutable vs immutable values, reference sharing.
 These two are on essentially every "experienced Python candidate" question list, and they are
 not trivia — a shared mutable default in a conversation-history helper or an agent state object
 leaks data between users. That is a real production incident, and interviewers know it.
+
+**Source:** Both traps are presented as the first two "Conceptual Round" questions in
+[Generalist Programmer's 20 Worked
+Examples](https://generalistprogrammer.com/tutorials/python-interview-questions) — question #1
+("Why are mutable default arguments dangerous?") and question #4 ("Shallow copy vs deep copy?"),
+with nearly identical code shown. Widely echoed across other general Python interview lists;
+not tied to one specific company's leaked interview.
 
 ---
 
@@ -865,6 +1252,13 @@ Use `yield`. Prove to yourself that nothing is read until you iterate. Then answ
 return the skipped-line count from a generator, given that `return` inside a generator doesn't
 work the way you'd expect? Also explain why you cannot iterate the same generator twice.
 
+**Starter skeleton**
+```python
+def read_jsonl(path: str):
+    """Yield one parsed JSON record at a time; skip malformed lines."""
+    ...
+```
+
 **Concept / pattern tested**
 Generator functions, lazy evaluation, O(1) memory, generator exhaustion, `StopIteration.value`
 vs a mutable stats object vs a class with `__iter__`, error handling inside a stream.
@@ -873,6 +1267,15 @@ vs a mutable stats object vs a class with `__iter__`, error handling inside a st
 "How do you handle a file too large for memory?" is a standard question, and generators are the
 answer. In AI pipelines this is the ingestion path for every corpus you'll ever index — and
 streaming LLM responses are generators too, so the mental model transfers directly.
+
+**Source:** General pattern — "how do you handle large files without loading them into memory"
+is listed as item #20 in [DataInterview's Top 100 Python Interview
+Questions](https://www.datainterview.com/blog/top-100-python-interview-questions). The same
+"stream large data lazily" theme also underlies coding challenge #13 ("Streaming Parser — SSE
+parser, incremental tool-call argument assembly") in the [AI-Engineer-Interview-Questions
+repo](https://github.com/ombharatiya/AI-Engineer-Interview-Questions), though that challenge is
+SSE-specific rather than JSONL-specific. No single-company attribution found for this exact
+JSONL framing.
 
 ---
 
@@ -902,6 +1305,17 @@ Use `*args, **kwargs` so it wraps any signature, and `functools.wraps` so the wr
 keeps its name and docstring. Then discuss: why add random jitter, and why should you *not*
 retry on a 400-level error?
 
+**Starter skeleton**
+```python
+def retry(max_attempts: int = 3, base_delay: float = 1.0, exceptions: tuple = (Exception,)):
+    """Decorator factory: retry the wrapped function with exponential backoff."""
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            ...
+        return wrapper
+    return decorator
+```
+
 **Concept / pattern tested**
 Closures, decorator factories (decorator with arguments), `*args/**kwargs`, `functools.wraps`,
 exception handling, exponential backoff and jitter.
@@ -911,6 +1325,15 @@ Decorators are the number-one "advanced Python" interview topic, and retry-with-
 exact example AI interview guides list as a standard coding warm-up. Every LLM API call in
 production sits behind one, because providers rate-limit and time out constantly. Knowing
 *which* errors are worth retrying is the senior part of the answer.
+
+**Source:** Explicitly documented as a **real Anthropic AI engineering interview question**
+("LLM APIs are unreliable in production — they return rate limit errors (429)...") on
+[velocode.ai](https://velocode.ai/practice/resilient-llm-api-calls-with-exponential-backoff-retry-logic).
+Also appears as coding challenge #11 ("Rate Limiter & Retry — token bucket, exponential backoff
+with jitter") in the [AI-Engineer-Interview-Questions
+repo](https://github.com/ombharatiya/AI-Engineer-Interview-Questions), and as an explicit item
+in [GenAI Engineer Interview Questions 2026](https://cloudsoftsol.com/blog/genai-engineer-interview-questions-2026/)
+(Section 18, "How do you implement retries?").
 
 ---
 
@@ -940,6 +1363,16 @@ Implement Part A by hand with a dict. Then answer the production questions: what
 memory if `maxsize=None`, why is caching a method on `self` a memory-leak risk, and what makes
 caching an *LLM* call different from caching a pure function.
 
+**Starter skeleton**
+```python
+def memoize(func):
+    """Part A: hand-rolled memoization decorator."""
+    cache = {}
+    def wrapper(*args, **kwargs):
+        ...
+    return wrapper
+```
+
 **Concept / pattern tested**
 Memoization, `functools.lru_cache` / `cache`, hashability of cache keys, cache eviction,
 unbounded-cache memory growth.
@@ -948,6 +1381,11 @@ unbounded-cache memory growth.
 Caching is listed explicitly in GenAI coding-round question banks ("implement caching for LLM
 responses"), and it's the cheapest single lever for cutting LLM cost. The unhashable-argument
 problem is a real thing you will hit within a week of using `lru_cache`.
+
+**Source:** Listed verbatim as item #18 ("Implement caching for LLM responses") in Section 17 of
+[GenAI Engineer Interview Questions 2026](https://cloudsoftsol.com/blog/genai-engineer-interview-questions-2026/).
+No specific company attribution found for this exact framing, though caching is called out
+generally as a top-priority topic across multiple GenAI interview guides reviewed.
 
 ---
 
@@ -976,6 +1414,13 @@ Get the step size right (`chunk_size - overlap`) and make sure the loop terminat
 than one chunk. Then discuss: why overlap at all, what breaks when you split mid-sentence, and
 how a token-based splitter differs from a word-based one.
 
+**Starter skeleton**
+```python
+def chunk_text(text: str, chunk_size: int, overlap: int) -> list[str]:
+    """Split text into word-based chunks with overlapping words between them."""
+    ...
+```
+
 **Concept / pattern tested**
 Windowing with a stride, off-by-one and termination conditions, input validation, reusing your
 Q20/Q21 instincts.
@@ -985,6 +1430,15 @@ Q20/Q21 instincts.
 banks. It is the single most representative AI-engineer warm-up: trivial-looking, easy to get
 subtly wrong, and it opens straight into the RAG trade-off discussion (fixed-size vs sentence
 vs semantic vs structure-aware chunking) that interviewers actually want to have.
+
+**Source:** Listed verbatim as item #4 ("Implement basic text chunking without LangChain") in
+Section 17 of [GenAI Engineer Interview Questions
+2026](https://cloudsoftsol.com/blog/genai-engineer-interview-questions-2026/). Also appears as a
+dedicated coding challenge — [`09_text_chunking.py`
+](https://github.com/ombharatiya/AI-Engineer-Interview-Questions/blob/main/12-coding-challenges/09_text_chunking.py)
+("Fixed, sliding-window, recursive, sentence chunkers") in the AI-Engineer-Interview-Questions
+repo, which aggregates public interview material across 25 companies including Anthropic,
+OpenAI, and Google DeepMind.
 
 ---
 
@@ -1013,6 +1467,18 @@ Handle the zero-vector case (division by zero) explicitly. Reuse your Q12 sortin
 top-K, then improve it with `heapq.nlargest` and explain when that's actually better than
 sorting. Finally: state the NumPy one-liner and explain why it's faster.
 
+**Starter skeleton**
+```python
+def cosine_similarity(a: list[float], b: list[float]) -> float:
+    """Cosine similarity between two vectors, pure Python (no NumPy)."""
+    ...
+
+
+def top_k(query: list[float], docs: dict[str, list[float]], k: int) -> list[tuple[str, float]]:
+    """Return the k most similar doc_ids to query, sorted by score descending."""
+    ...
+```
+
 **Concept / pattern tested**
 `zip()` + `sum()` for dot products, `math.sqrt`, guarding division by zero, sorting vs heap for
 top-K (O(n log n) vs O(n log k)), vectorisation.
@@ -1022,6 +1488,15 @@ This is named explicitly as a warm-up in published AI-engineer interview loops (
 among them). Interviewers use it to check that you understand what a vector database is doing
 underneath rather than only knowing which SDK method to call — and the follow-up is always
 "when would you use dot product or Euclidean instead, and why is cosine the default?"
+
+**Source:** Explicitly documented — **Amazon GenAI pairs a standard LeetCode problem with
+cosine-similarity in NumPy** as part of its coding round, per
+[openagenthub.io's company-by-company coding round breakdown](https://openagenthub.io/interview/coding-rounds/).
+Also appears as coding challenge #08 ("Semantic Search / RAG — embed, index, cosine retrieval,
+context assembly") in the [AI-Engineer-Interview-Questions
+repo](https://github.com/ombharatiya/AI-Engineer-Interview-Questions), and listed as item #2
+("Implement cosine similarity in Python") in Section 17 of
+[GenAI Engineer Interview Questions 2026](https://cloudsoftsol.com/blog/genai-engineer-interview-questions-2026/).
 
 ---
 
@@ -1053,6 +1528,21 @@ json.JSONDecodeError`, then validate. Define your own exception classes. Then di
 production answer: why hand-rolled validation loses to Pydantic v2 / the provider's structured
 output mode, and what your retry-repair strategy should be when parsing fails.
 
+**Starter skeleton**
+```python
+class ParseError(Exception):
+    """Raised when no JSON object can be found in the response."""
+
+
+class ValidationError(Exception):
+    """Raised when the parsed JSON doesn't match the expected shape."""
+
+
+def extract_and_validate_json(response_text: str, required: dict[str, type]) -> dict:
+    """Extract a JSON object from a messy LLM response and validate its fields."""
+    ...
+```
+
 **Concept / pattern tested**
 `json` module, `try/except` scoping (catch narrow, not bare `except`), custom exception
 hierarchies, exception chaining with `raise ... from e`, defensive parsing of untrusted input.
@@ -1061,6 +1551,13 @@ hierarchies, exception chaining with `raise ... from e`, defensive parsing of un
 "Implement structured JSON output validation" is a listed GenAI coding-round task, and treating
 the LLM as a flaky external dependency is the mindset interviewers are probing for. Bare
 `except:` in your answer is an instant red flag — expect to be asked why.
+
+**Source:** Listed verbatim as item #15 ("Implement structured JSON output validation") in
+Section 17 of [GenAI Engineer Interview Questions
+2026](https://cloudsoftsol.com/blog/genai-engineer-interview-questions-2026/). No specific
+company attribution found for this exact framing, though "how do you get structured/JSON output
+reliably" is called out as a standard question across multiple GenAI interview guides reviewed
+(e.g. the [AI Engineer Interview Playbook](https://dev.to/truongpx396/the-ai-engineer-interview-playbook-45pb), Q39).
 
 ---
 
@@ -1089,6 +1586,25 @@ Implement it as a class with `__enter__` / `__exit__` first. Understand exactly 
 receives, and what returning `True` from it does (and why that's usually a bug). Then rewrite it
 using `contextlib.contextmanager` with `try/finally`, and say which version you'd prefer and why.
 
+**Starter skeleton**
+```python
+class track:
+    """Context manager: time a block and accumulate token counts."""
+
+    def __init__(self, label: str):
+        ...
+
+    def __enter__(self):
+        ...
+        return self
+
+    def add_tokens(self, count: int) -> None:
+        ...
+
+    def __exit__(self, exc_type, exc_val, tb):
+        ...
+```
+
 **Concept / pattern tested**
 The context-manager protocol, `__enter__` return value, `__exit__(exc_type, exc_val, tb)`,
 exception suppression, `contextlib.contextmanager` and the `yield` inside `try/finally`,
@@ -1099,6 +1615,15 @@ Context managers are the standard "do you understand Python's resource model" qu
 version doubles as an observability question — tracking latency and token cost per operation is
 core AI-engineering work. The `return True` trap is the specific thing interviewers are waiting
 to ask about.
+
+**Source:** General pattern for the context-manager mechanics themselves (widely documented,
+e.g. in the `with` statement item of
+[DataInterview's Top 100](https://www.datainterview.com/blog/top-100-python-interview-questions)).
+The token/latency-tracking framing specifically reflects a priority repeatedly named across
+GenAI interview guides — e.g.
+["observability (tokens/latency/costs)" is called out as improving senior-interview chances](https://www.stackoverflowtips.com/posts/top-50-genai-llm-interview-questions-answers-2025) —
+but this exact `track()` question was constructed for this roadmap rather than pulled from one
+company's leaked interview; treat it as a realistic composite, not a confirmed report.
 
 ---
 

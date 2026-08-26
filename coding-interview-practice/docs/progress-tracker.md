@@ -36,9 +36,9 @@ has been reviewed. Never inferred.
 
 | # | Question | Status | Date | Revisit? |
 |---|---|---|---|---|
-| Q8 | Word frequency + top N (`Counter`) | ⬜ | | |
-| Q9 | Two-sum with a dictionary | ⬜ | | |
-| Q10 | Anagram check — two approaches | ⬜ | | |
+| Q8 | Word frequency + top N (`Counter`) | ✅ | 2026-08-26 | 🔁 plain-dict version skipped (time) — revisit if time allows |
+| Q9 | Two-sum with a dictionary | ✅ | 2026-08-26 | 🔁 brute-force O(n²) version + narrated complexity skipped (time, same as Q8) |
+| Q10 | Anagram check — two approaches | ✅ | 2026-08-26 | |
 | Q11 | Set operations across two collections | ⬜ | | |
 | Q12 | Sort records by field with `key=lambda` | ⬜ | | |
 | Q13 | Flatten a nested list (1 level + arbitrary) | ⬜ | | |
@@ -70,7 +70,7 @@ has been reviewed. Never inferred.
 | Q29 | Safe JSON extraction + validation | ⬜ | | |
 | Q30 | Context manager for timing / token tracking | ⬜ | | |
 
-**Completed:** 6 / 30
+**Completed:** 9 / 30
 
 ---
 
@@ -312,6 +312,124 @@ asks for one small change — then you're editing shared state instead of one cl
 
 ---
 
+### Q8 — Word frequency + top N (`Counter`)          [2026-08-26]
+
+**My first instinct:** started with a `print`-only draft that lowercased and split but never
+counted anything — realized mid-attempt the loop needed a `Counter` call, not a manual scan.
+Second pass went straight to `str.translate(str.maketrans("", "", string.punctuation))` before
+`lower()`/`split()`, then `Counter(...).most_common(n)` — correct on the first working attempt.
+
+**What I got wrong:** nothing functionally — all four self-written test cases passed, including
+an edge case (`"... !!! ??? ,,,"` → all-punctuation input) that the roadmap didn't even ask for.
+One naming nit: `clean_punctuation` held the *cleaned sentence*, not the punctuation — second
+hit of the Q1 "name it for what it is" mistake (see Recurring Mistakes).
+
+**Key Python thing learned:**
+- `str.translate(str.maketrans("", "", chars))` deletes every char in `chars` in **one O(n) pass**
+  done in C — the production-standard way to strip a fixed character set, faster than chained
+  `.replace()` calls (O(n·k) for k chars) and usually faster than a regex `re.sub(r"[^\w\s]", "")`
+  for plain ASCII punctuation.
+- `most_common(n)` ties resolve by **first-insertion order**, not randomly. `Counter` is a `dict`
+  subclass (insertion-ordered since 3.7), and a key's position is fixed the first time it's
+  inserted — later `+=1`s never move it. With `n` given, `most_common()` calls
+  `heapq.nlargest(n, self.items(), key=...)` internally, which deliberately tags each item with
+  its original position as a tiebreaker so equal counts still come out in first-seen order.
+- To force **alphabetical** order on ties instead, sort manually with a compound key:
+  `sorted(counter.items(), key=lambda kv: (-kv[1], kv[0]))[:n]` — negate the count to sort it
+  descending without `reverse=True` (which would also flip the alphabetical part), and Python's
+  tuple comparison only looks at the second element when the first is tied. Same idiom as the
+  multi-key sort in Q16.
+
+**Complexity:** `translate()` is O(n) over the text length. Building the `Counter` is O(w) for
+w words. `most_common(n)` is O(w log n) via the heap; a full `sorted()` fallback is O(w log w).
+
+**Better/Pythonic version:** the `Counter` + `translate()` combo already *is* the Pythonic
+version here — the plain-dict rewrite (reusing Q2's manual counting loop) was intentionally
+skipped this round due to time; logged in Decisions below.
+
+**Interview soundbite:** "`most_common()` ties aren't random — they preserve first-seen order
+because `Counter` is an insertion-ordered dict. If I need alphabetical ties instead, I sort
+manually with a `(-count, word)` compound key instead of relying on `most_common()`."
+
+---
+
+### Q9 — Two-sum with a dictionary          [2026-08-26]
+
+**My first instinct:** first draft compared `nums[index]` against itself via
+`target - num == nums[index]` — a bug that could never find a real pair, since `num` and
+`nums[index]` are literally the same value at that point in the loop.
+
+**What I got wrong:**
+1. First attempt's condition compared a number to itself, not to a different number in the
+   list — structurally could never find `(2, 7)` for the classic example.
+2. Second attempt built `dict(enumerate(nums))` — index → value — then checked
+   `nums[index] in enumerate_nums`, which tests "is this value a valid index," not "have I seen
+   the complement." Wrong direction entirely.
+3. `result[index]` on a placeholder `[0]` list did nothing and would have crashed past index 0.
+
+**What I got right (final attempt):** dict oriented the correct way (`{number: index}`), and —
+this is the part that actually matters — checked `complement in seen` *before* writing
+`seen[num] = index`. That ordering is what stops a number from ever pairing with itself (traced
+`nums=[3], target=6` by hand: `seen` is still empty when `3`'s complement (`3`) is checked, so it
+correctly falls through instead of wrongly matching itself).
+
+**Key Python thing learned:** the "check-before-insert" ordering in a single-pass hash-map
+algorithm isn't a style choice — it's what guarantees an element never uses itself as its own
+partner. Same family of care as Q3's demote-before-overwrite ordering.
+
+**Complexity:** brute-force nested loop is O(n²) time, O(1) extra space. One-pass dict version is
+O(n) time, O(n) space — trading space for time, same move as Q2/Q4's `in`-on-list vs `in`-on-set
+lesson. (Brute-force version itself not written this round — skipped for time, same pattern as
+the Q8 decision.)
+
+**Better/Pythonic version:** the one-pass `seen: dict[int, int]` version already written is the
+production answer — LeetCode #1, confirmed asked at Google/Amazon/Microsoft/Meta per the
+roadmap's sources, worth having cold.
+
+**Interview soundbite:** "I check the complement against `seen` before I insert the current
+number — that ordering is what stops an element from matching itself when its own complement
+equals its own value."
+
+---
+
+### Q10 — Anagram check: sorting vs frequency counting          [2026-08-26]
+
+**My first instinct:** normalize both strings with `[ch.lower() for ch in s if ch.isalnum()]`,
+then compare via `sorted(...)==sorted(...)` for one version and `Counter(...)==Counter(...)` for
+the other. Both correct on the first pass — traced `"Listen"/"Silent"` → True and
+`"hello"/"world"` → False by hand.
+
+**What I got wrong:**
+1. `isalnum()` filters out more than the spec asked for — the problem statement says "ignoring
+   case and spaces," but `isalnum()` also drops all punctuation (apostrophes, hyphens, etc.), a
+   broader normalization than stated. Not necessarily wrong, but a deviation worth naming on
+   purpose rather than discovering later.
+2. Docstring copy-paste: `is_anagram_counting_v2` kept the docstring
+   `"""Anagram check via sorting."""` from the function above it — second hit (after Q9's stale
+   test comment) of "a comment describing the old version, not the one in front of you." Now a
+   recurring mistake (see below).
+3. Both functions duplicate the identical normalization block — a shared `_normalize()` helper
+   would remove the risk of the two versions quietly disagreeing on what "cleaned" means if the
+   rule ever changes.
+
+**Key Python thing learned:** sorting-based comparison is O(n log n); frequency-counting
+(`Counter` equality) is O(n) and is the asymptotically better choice. At very small scale (tiny
+strings, checked many times), sorting's low-constant-factor Timsort can occasionally out-perform
+hashing's constant overhead in wall-clock terms — but for anything non-trivial in length, O(n)
+counting wins outright.
+
+**Complexity:** sorting version: O(n log n) time (dominated by `sorted()`), O(n) space for the
+two cleaned lists. Counting version: O(n) time, O(k) space where k = distinct characters.
+
+**Better/Pythonic version:** `Counter(clean_a) == Counter(clean_b)` — the production answer,
+and arguably more readable than trusting `sorted()==sorted()` to imply "same multiset of chars."
+
+**Interview soundbite:** "Sorting gives you O(n log n); counting with `Counter` gives you O(n)
+and is the one I'd default to — sorting only competes at very small, very repeated scale where
+constant factors matter more than asymptotics."
+
+---
+
 ## Built-ins & idioms cheat sheet
 
 Grow this list as it comes up. If something here still feels unfamiliar, it's not learned yet.
@@ -337,6 +455,11 @@ Grow this list as it comes up. If something here still feels unfamiliar, it's no
 | Hashability | Sets/dict-keys need immutable-ish elements; dicts/lists raise `TypeError` | Q4 |
 | `zip(a, b, strict=True)` | Raise `ValueError` on length mismatch instead of silent truncation | Q5 |
 | `return a, b` | Comma-packing → a `tuple`, not a `dict` or anything else — check before annotating | Q6 |
+| `str.translate(str.maketrans("", "", chars))` | Delete a fixed set of chars in one O(n) C-level pass — production way to strip punctuation | Q8 |
+| `string.punctuation` | Ready-made ASCII punctuation constant, no need to hardcode a list | Q8 |
+| `most_common(n)` tie order | Resolves ties by first-insertion order (via `heapq.nlargest` tagging position), not randomly | Q8 |
+| `sorted(items, key=lambda kv: (-kv[1], kv[0]))` | Descending-then-ascending compound key without `reverse=True` flipping both fields | Q8 |
+| `str.isalnum()` | True if a char is a letter or digit — handy for stripping spaces/punctuation while normalizing text | Q10 |
 
 ---
 
@@ -353,7 +476,8 @@ Anything you get wrong **twice** goes here. This is the highest-value section in
 | Return-type annotation not matching what's actually returned | Q1, Q3, Q6 (three times now — a list, a string, a dict, each wrong in a different way) | After writing `return`, check the annotation against the *actual* runtime type before moving on. `return a, b` always packs a tuple. |
 | One function doing two unrelated jobs because an example showed them together | Q6 | An example juxtaposing two things is not a spec for one function to do both. Ask: would every caller of A also want B? |
 | camelCase names (JS/TS muscle memory) | Q1, Q2 | PEP 8: `snake_case` for functions and variables |
-| Naming a variable for what it *becomes*, not what it *is* | Q1 (`words` held a sentence) | Name the parameter for the input |
+| Naming a variable for what it *becomes*, not what it *is* | Q1 (`words` held a sentence), Q8 (`clean_punctuation` held the cleaned sentence, not punctuation) | Name the parameter for the input |
+| Leaving a comment/docstring copied from the previous version — describing the OLD function, not the one in front of you | Q9 (stale `# Output: [0, 1]` test comment after changing the input), Q10 (`is_anagram_counting_v2` docstring still said "via sorting") | After duplicating a function, re-read every comment and docstring inside it — not just the logic — before moving on |
 
 ---
 
@@ -366,3 +490,5 @@ deliberately skipped — with the reason.
 |---|---|---|
 | 2026-08-25 | Roadmap scoped to Python-specific + AI-flavoured practical problems, not general DSA | Target is Python/GenAI coding rounds at 2–3 YOE, where interviewers test built-in fluency and Python traps far more than graph/DP algorithms |
 | 2026-08-25 | Two dedicated debugging questions (Q14, Q23) included instead of pure algorithm questions | Snippet/output/debug rounds are standard for experienced Python candidates |
+| 2026-08-26 | Skipped the plain-dict rewrite of Q8 (reusing Q2's manual counting pattern) | Time constraint — the `Counter`-based solution alone was judged sufficient to demonstrate the pattern for this pass |
+| 2026-08-26 | Skipped the brute-force O(n²) version + narrated complexity for Q9 | Time constraint, same pattern as the Q8 plain-dict skip |
