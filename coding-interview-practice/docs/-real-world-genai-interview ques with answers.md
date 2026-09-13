@@ -147,6 +147,27 @@ And the eval set has to grow with the corpus — a 20-question set that passed a
 - ANN indexes (HNSW/IVF) introduce a recall-vs-latency trade you must measure.
 - Ingestion becomes a pipeline; the eval set must scale with the corpus.
 ---
+**What is ANN how its Work?** 
+
+In **retrieval (RAG)**, the main change from **10K → 1M documents** is how we search the vector database.
+
+* **10K docs:** Brute-force search is practical. For a query, compare its embedding with **all 10K vectors**, find the closest ones. Simple but gets expensive as data grows.
+* **1M docs:** Comparing against **1 million vectors for every query** becomes slow and expensive. So we use **ANN (Approximate Nearest Neighbor)** indexes such as **HNSW** or **IVF**.
+* ANN doesn't search everything. It intelligently searches a **smaller relevant portion** of the vector space.
+
+The trade-off is:
+
+**Brute force → higher accuracy, higher latency at scale**
+**ANN → much lower latency, but potentially slightly lower recall**
+
+So as your dataset grows:
+
+`10K → Brute Force`
+
+`100K–1M+ → ANN (HNSW / IVF)`
+
+And with ANN, you tune parameters to find the right balance between **retrieval quality (recall)** and **speed (latency)**.
+
 
 # Part 2 — Tier 1 (asked in almost every loop)
 
