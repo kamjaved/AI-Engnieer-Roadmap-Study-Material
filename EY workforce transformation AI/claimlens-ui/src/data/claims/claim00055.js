@@ -1,0 +1,60 @@
+// CLM-2026-00055 - REJECTED_INVALID: bad NPI, future DOS, unknown ICD-10
+export const claim00055 = {
+  id: 'CLM-2026-00055',
+  external_ref: '837P-SYN-00055',
+  source: 'json',
+  status: 'REJECTED_INVALID',
+  bucket: 'REJECTED',
+  dollars_at_risk: 0.0,
+  total_charge: 210.0,
+  patient_token: 'SYN-PT-00491',
+  patient_age: 69,
+  patient_sex: 'M',
+  billing_npi: '1234567890', // Fails Luhn check
+  dos_from: '2026-11-05', // Future date
+  dos_to: '2026-11-05',
+  created_at: '2026-10-15 08:10 UTC',
+  age: '50m',
+  row_version: 1,
+  bill_blob_path: null,
+  top_finding: 'FORMAT_ERROR (NPI Luhn + Future DOS)',
+  validation_errors: [
+    'billing_npi "1234567890" failed 10-digit Luhn check digit validation.',
+    'dos_from "2026-11-05" is in the future relative to ingestion date.',
+    'dx_codes[0] "Z99.999" does not exist in ref_icd10 (2027 ICD-10-CM tabular order).',
+  ],
+  lines: [
+    {
+      line_no: 1,
+      dos: '2026-11-05',
+      pos: '11',
+      code: '99213',
+      code_desc: 'Office/outpatient visit, established patient',
+      modifiers: [],
+      dx_codes: ['Z99.999'],
+      dx_desc: ['Invalid ICD-10 code'],
+      units: 1,
+      charge: 210.0,
+      peer_p99: 150.0,
+      pfs_rate: 92.1,
+      rendering_npi: '1234567890',
+      flags: ['INVALID_SCHEMA'],
+    },
+  ],
+  encounter_note: 'N/A — Rejected at Step 2 (Pydantic Normalization & Format Validation) prior to Rules/AI.',
+  note_meta: { generator_model: 'none', prompt_version: 'none', seed: 0, prompt_shield: 'N/A' },
+  findings: [],
+  memo: null,
+  audit_events: [
+    {
+      seq: 1008,
+      timestamp: '2026-10-15 08:10:01',
+      actor: 'worker:validator',
+      event_type: 'REJECTED_INVALID',
+      details:
+        'Front-end rejection: Luhn check failed on NPI 1234567890; future DOS; unknown ICD-10 Z99.999.',
+      prev_hash: '7c8899de3456fa23',
+      hash: '8d9900ef4567ab34',
+    },
+  ],
+};
