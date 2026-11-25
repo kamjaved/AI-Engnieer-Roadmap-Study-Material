@@ -1,8 +1,8 @@
-# Python Interview Preparation Roadmap — 30 Questions
+# Python Interview Preparation Roadmap — 48 Questions
 
 **Target profile:** Python developer / AI–GenAI engineer, ~2–3 years of practical Python experience
 **Goal:** Pass coding rounds, live-coding screens, snippet/debug rounds and "practical Python" challenges
-**Created:** 2026-08-25 · **Updated:** 2026-08-26 (added starter skeletons + per-question sources, loosened constraints)
+**Created:** 2026-08-25 · **Updated:** 2026-08-26 (added starter skeletons + per-question sources, loosened constraints) · **Extended:** 2026-11-25 (added Q31–Q48 covering missing Service-Based, HackerRank & Accenture OA coding questions without altering Q1–Q30)
 **Rule:** No solutions in this file. Solve first, review after.
 
 **How to read the constraints below:** where a question says "avoid X" or "without Y," that
@@ -51,8 +51,16 @@ actually being asked right now:
   matches one of those verified reports closely, the company is named in that question's
   `Source:` line. Most Level 1–2 questions are foundational patterns that appear everywhere and
   are not tied to one company's leaked interview — that's stated honestly rather than guessed.
+- **Service-Based & HackerRank extension (2026-11-25 update):** cross-checked Q1–Q30 against
+  `Python Interview & HackerRank Question Bank service-Based_compnay.md` (TCS, Infosys,
+  Accenture, Wipro, Deloitte, EY, Capgemini, Cognizant, LTIMindtree, HackerRank Basic
+  Certification, and first-hand Accenture AI Engineer OA problems). Appended Q31–Q48 to cover
+  all 15 completely missing coding problems plus the uncovered variants from 4 partial overlaps
+  (OOP/dunder classes, 2D grids, stacks, math/sorting from scratch, classic DP/prefix-suffix,
+  and deterministic workflow orchestration).
 
-The 30 questions below are ordered so each one reuses something you built in an earlier one.
+The first 30 questions below are ordered so each one reuses something you built in an earlier
+one; Q31–Q48 follow the same progression from Beginner to Advanced-Intermediate.
 
 **General sources:** [InterviewBit](https://www.interviewbit.com/python-interview-questions/) ·
 [DataCamp](https://www.datacamp.com/blog/top-python-interview-questions-and-answers) ·
@@ -79,6 +87,10 @@ The 30 questions below are ordered so each one reuses something you built in an 
 | **Easy** | Q8 – Q14 | `Counter`, sets, hash-map patterns, sorting with `key`, first debug question |
 | **Intermediate** | Q15 – Q23 | Grouping, multi-key sort, sliding window, recursion, intervals, search, the classic Python traps |
 | **Advanced-Intermediate** | Q24 – Q30 | Generators, decorators, caching, and the AI/GenAI-flavoured practical problems |
+| **Service-Based / HackerRank Extension — Beginner** | Q31 – Q33 | Palindrome & swap-case, Fibonacci suite, string-predicate validation |
+| **Service-Based / HackerRank Extension — Easy** | Q34 – Q41 | Primes/Sieve, GCD/binary, in-place two-pointer & merge, stacks, Merge Sort, OOP dunder classes, 2D grids |
+| **Service-Based / HackerRank Extension — Intermediate** | Q42 – Q47 | Single-pass string simulation, Kadane DP, prefix/suffix product, sweep-line concurrency, divisor pruning, combinatorics mod $10^9 + 7$ |
+| **Service-Based / HackerRank Extension — Advanced-Intermediate** | Q48 | Deterministic multi-rater agent orchestration capstone (Accenture AI Engineer OA) |
 
 Work top to bottom. Do not skip the Beginner block — the interviewer's first question is
 usually one of those, and fumbling it sets the tone for the whole round.
@@ -978,7 +990,7 @@ Part B: scores = [0.1, 0.4, 0.6, 0.9], threshold = 0.5  -> insertion point 2
 **Expected task**
 Write the loop yourself first. Get the `mid` calculation and the `while low <= high` boundary
 right — this is where everyone introduces an off-by-one. Then replace Part B with
-`bisect.bisect_left` / `bisect_right` and explain the difference between them.
+`bisect.bisect_left` / `bisect.bisect_right` and explain the difference between them.
 
 **Starter skeleton**
 ```python
@@ -1627,7 +1639,1026 @@ company's leaked interview; treat it as a realistic composite, not a confirmed r
 
 ---
 
-## After you finish all 30
+# SERVICE-BASED & HACKERRANK EXTENSION (Q31 – Q48)
+
+Added from `Python Interview & HackerRank Question Bank service-Based_compnay.md` to cover the
+coding patterns reported at Indian service companies, Big-4 firms, HackerRank Basic
+Certification assessments, and your first-hand Accenture AI Engineer OA that were not fully
+represented in Q1–Q30.
+
+---
+
+## Q31. Palindrome check and reverse words with swap-case
+
+**Difficulty:** Beginner
+
+**Problem statement**
+Write two string functions extending Q1. The first checks whether a string is a palindrome,
+ignoring case, spaces, and punctuation (consider alphanumeric characters only). The second
+reverses the order of words in a sentence and swaps the case of every letter.
+
+**Example**
+```
+Input:  "A man, a plan, a canal: Panama"
+Output: True
+
+Input:  "Hello World"
+Output: "wORLD hELLO"
+```
+
+**Expected task**
+Implement the palindrome check first with filtering + slicing, then with a two-pointer loop
+using $O(1)$ extra space. For the sentence function, explain how `split()` behaves differently
+from `split(" ")` on repeated spaces and why `"".join(...)` beats repeated `+=` concatenation.
+
+**Starter skeleton**
+```python
+def is_palindrome(text: str) -> bool:
+    """Return True if alphanumeric characters read the same forward and backward."""
+    ...
+
+
+def reverse_words_swap_case(sentence: str) -> str:
+    """Reverse word order and swap the case of every letter."""
+    ...
+```
+
+**Target complexity**
+Time: $O(n)$ | Space: $O(1)$ extra for two-pointer palindrome, $O(n)$ for sentence transform.
+
+**Concept / pattern tested**
+Character predicates (`str.isalnum()`), `str.swapcase()`, two-pointer scanning, string
+immutability.
+
+**Why it's asked**
+"Reverse Word & Swap Case" is a recurring HackerRank Python (Basic) certification task, and
+alphanumeric palindrome validation is a staple follow-up to string reversal in service-company
+screens.
+
+**Source:** **HackerRank Python (Basic) Certification**
+(["Reverse Word & Swap Case"](https://github.com/anishLearnsToCode/hackerrank-python-basic-skill-test)),
+[HackerRank Blog](https://www.hackerrank.com/blog/python-interview-questions-developers-should-know/),
+and **LTIMindtree** string-reversal reports
+([Glassdoor](https://www.glassdoor.com/Interview/LTIMindtree-Software-Engineer-Interview-Questions-EI_IE8441464.0,11_KO12,29.htm)).
+
+---
+
+## Q32. Fibonacci: series, nth term, and membership check
+
+**Difficulty:** Beginner
+
+**Problem statement**
+Implement three functions around the Fibonacci sequence:
+1. Return the first `n` Fibonacci numbers starting with `0, 1`.
+2. Return the 1-indexed `n`-th term where `fib(1) = 1` and `fib(2) = 1`.
+3. Determine whether a non-negative integer `n` belongs to the Fibonacci sequence.
+
+**Example**
+```
+fib_series(7)     -> [0, 1, 1, 2, 3, 5, 8]
+nth_fib(4)        -> 3
+is_fibonacci(21)  -> True
+is_fibonacci(22)  -> False
+```
+
+**Expected task**
+Use iterative tuple-swapping rather than naive recursion. For `is_fibonacci`, check the
+mathematical property ($5n^2 + 4$ or $5n^2 - 4$ is a perfect square) using `math.isqrt` instead
+of floating-point `sqrt`. Explain why naive recursion blows up to $O(2^n)$ and how
+`@functools.cache` trades memory for speed.
+
+**Starter skeleton**
+```python
+def fib_series(n: int) -> list[int]:
+    """Return the first n Fibonacci numbers starting 0, 1."""
+    ...
+
+
+def nth_fib(n: int) -> int:
+    """Return the 1-indexed nth Fibonacci number with fib(1) = fib(2) = 1."""
+    ...
+
+
+def is_fibonacci(n: int) -> bool:
+    """Return True if n belongs to the Fibonacci sequence."""
+    ...
+```
+
+**Target complexity**
+Time: $O(n)$ for `fib_series` and `nth_fib`, $O(1)$ arithmetic for `is_fibonacci` |
+Space: $O(n)$ for `fib_series`, $O(1)$ for `nth_fib` and `is_fibonacci`.
+
+**Concept / pattern tested**
+Tuple unpacking/swapping, iterative state updates, `math.isqrt` exact integer arithmetic vs.
+float precision limits, memoization trade-offs.
+
+**Why it's asked**
+Fibonacci is one of the top three coding questions reported across TCS, Capgemini, and Wipro
+interviews. Interviewers use it to test loop clarity, edge cases (`n = 0`, `n = 1`), and
+whether you understand recursion vs. iteration costs.
+
+**Source:** Candidate-reported at **TCS**
+([series](https://medium.com/@rana.akansha321/tcs-python-developer-interview-question-for-2023-87aab3426791)
+and [membership](https://www.naukri.com/code360/interview-experiences/tcs/interview-experience-system-engineer-jul-2022-exp-0-2-years)),
+**Capgemini** ([Taro report](https://www.jointaro.com/interviews/companies/capgemini/experiences/python-developer-pune-march-3-2025-no-offer-positive-6ca61b4c/)),
+**Wipro** ([Glassdoor](https://www.glassdoor.com/Interview/Wipro-Automation-Engineer-Interview-Questions-EI_IE9936.0,5_KO6,25.htm)),
+and **Citadel** ([Glassdoor](https://www.glassdoor.com/Interview/python-developer-interview-questions-SRCH_KO0,16.htm)).
+
+---
+
+## Q33. Password sanitizer with string predicates
+
+**Difficulty:** Beginner
+
+**Problem statement**
+Given a single string of space-separated candidate passwords, return a list of all valid
+passwords in their original order. A password is valid if:
+- its length is at least 5 characters,
+- it is **not** composed of letters only, and
+- it is **not** composed of digits only.
+
+**Example**
+```
+Input:  "abc12 hello 123456 pa$$w0rd x1"
+Output: ["abc12", "pa$$w0rd"]
+```
+
+**Expected task**
+Solve using Python's built-in string predicates (`isalpha()`, `isdigit()`). Then check edge
+cases aloud: what happens with `"pa$$$"` (symbols only — valid under these exact rules), empty
+input, or multiple spaces between tokens?
+
+**Starter skeleton**
+```python
+def sanitize_passwords(line: str) -> list[str]:
+    """Return valid passwords from a whitespace-separated line in original order."""
+    ...
+```
+
+**Target complexity**
+Time: $O(L)$ where $L$ is total characters | Space: $O(L)$ for the output list.
+
+**Concept / pattern tested**
+Built-in string predicates (`isalpha`, `isdigit`, `isalnum`, `isupper`), boolean logic, list
+comprehensions, careful spec reading.
+
+**Why it's asked**
+Short string-validation tasks are classic HackerRank warm-up questions at service firms. They
+test whether you read negation rules precisely rather than assuming "must contain both letters
+and digits."
+
+**Source:** Reported in **Accenture** HackerRank OA prep
+([interviewfox.ai](https://interviewfox.ai/interview-questions/accenture-hackerrank/) — flagged
+as an unverified marketing source in the Service-Based Question Bank).
+
+---
+
+## Q34. Prime numbers in a range
+
+**Difficulty:** Easy
+
+**Problem statement**
+Part A: write `is_prime(n)` to test whether a single integer is prime.
+Part B: write `primes_in_range(lo, hi)` to return all prime numbers between `lo` and `hi`
+inclusive.
+
+**Example**
+```
+is_prime(29)            -> True
+is_prime(1)             -> False
+primes_in_range(10, 30) -> [11, 13, 17, 19, 23, 29]
+```
+
+**Expected task**
+For Part A, stop trial division at $\lfloor \sqrt{n} \rfloor$ using `math.isqrt`. For Part B,
+implement the Sieve of Eratosthenes rather than calling `is_prime` on every number, and handle
+edge cases where `lo <= 1`, `hi < 2`, or `lo > hi`.
+
+**Starter skeleton**
+```python
+def is_prime(n: int) -> bool:
+    """Return True if n is a prime number."""
+    ...
+
+
+def primes_in_range(lo: int, hi: int) -> list[int]:
+    """Return all prime numbers in [lo, hi] inclusive using a sieve."""
+    ...
+```
+
+**Target complexity**
+Time: $O(\sqrt{n})$ for `is_prime`; $O(N \log \log N)$ for sieve where $N = \text{hi}$ |
+Space: $O(1)$ for `is_prime`; $O(N)$ for sieve.
+
+**Concept / pattern tested**
+Square-root divisibility bound, Sieve of Eratosthenes, slice assignment on `bytearray` or
+`list[bool]`, boundary validation.
+
+**Why it's asked**
+A staple TCS coding round question. Moving from naive $O(n)$ trial division to $O(\sqrt{n})$
+and then to the sieve demonstrates algorithmic awareness expected at ~3 years of experience.
+
+**Source:** Candidate-reported at **TCS** ("Write a program to print Prime Numbers for a given
+range", [Medium TCS Python Interview Guide](https://medium.com/@rana.akansha321/tcs-python-developer-interview-question-for-2023-87aab3426791)).
+
+---
+
+## Q35. GCD of an array and decimal-to-binary conversion
+
+**Difficulty:** Easy
+
+**Problem statement**
+Part A: given a non-empty list of positive integers, return the greatest common divisor (GCD)
+of all elements.
+Part B: given a non-negative integer `n`, return its binary representation as a string
+**without** using `bin()` or `format()`.
+
+**Example**
+```
+gcd_array([12, 18, 24]) -> 6
+to_binary(10)           -> "1010"
+to_binary(0)            -> "0"
+```
+
+**Expected task**
+For Part A, write Euclid's algorithm manually first, then show how `functools.reduce` with
+`math.gcd` (or `math.gcd(*arr)` on Python 3.9+) solves it cleanly. For Part B, implement the
+repeated divide-by-2 loop, handle `n == 0` explicitly, and avoid string `+=` concatenation
+inside the loop.
+
+**Starter skeleton**
+```python
+def gcd_array(arr: list[int]) -> int:
+    """Return the greatest common divisor of all integers in arr."""
+    ...
+
+
+def to_binary(n: int) -> str:
+    """Convert a non-negative integer to its binary string without bin()."""
+    ...
+```
+
+**Target complexity**
+Time: $O(n \log M)$ for GCD ($M = \max(\text{arr})$), $O(\log n)$ for binary conversion |
+Space: $O(1)$ for GCD, $O(\log n)$ for binary bits.
+
+**Concept / pattern tested**
+Euclidean algorithm, `functools.reduce`, base conversion via `//` and `%`,
+`"".join(reversed(...))`.
+
+**Why it's asked**
+Both appear as classic HackerRank/technical-round math warm-ups at Cognizant and LTIMindtree to
+check basic number theory and loop discipline without leaning on built-in shortcuts.
+
+**Source:** Candidate-reported at **Cognizant** HackerRank ("GCD of all the numbers in a given
+array", [GeeksforGeeks](https://www.geeksforgeeks.org/cognizant-interview-experience-set-2-campus/))
+and **LTIMindtree** ("convert decimal to binary program",
+[Glassdoor](https://www.glassdoor.co.in/Interview/LTIMindtree-Developer-Interview-Questions-EI_IE8441464.0,11_KO12,21.htm)).
+
+---
+
+## Q36. In-place sorted deduplication and merging two sorted lists
+
+**Difficulty:** Easy
+
+**Problem statement**
+Part A: given a **sorted** list of integers, remove duplicates **in place** using $O(1)$ extra
+space so the first `k` elements hold the unique values in sorted order, and return `k`. Also
+write a companion helper that returns all elements appearing more than once in any list.
+Part B: given two already-sorted lists, merge them into a single sorted list without calling
+`sorted()`.
+
+**Example**
+```
+nums = [1, 1, 2, 3, 3, 3]
+remove_dups_sorted_inplace(nums)    -> 3   # nums[:3] is now [1, 2, 3]
+
+find_duplicates([1, 1, 2, 3, 3])    -> [1, 3]
+
+merge_sorted([1, 4, 9], [2, 3, 10]) -> [1, 2, 3, 4, 9, 10]
+```
+
+**Expected task**
+Use the slow/fast two-pointer pattern for Part A (no `set` or extra list). Use two indices for
+Part B, then mention `heapq.merge` for lazy merging in production. Handle empty lists for all
+three functions.
+
+**Starter skeleton**
+```python
+def remove_dups_sorted_inplace(arr: list[int]) -> int:
+    """Deduplicate sorted arr in place; return count k of unique elements."""
+    ...
+
+
+def find_duplicates(items: list) -> list:
+    """Return all elements that appear more than once."""
+    ...
+
+
+def merge_sorted(a: list[int], b: list[int]) -> list[int]:
+    """Merge two sorted lists into one sorted list in O(n + m) time."""
+    ...
+```
+
+**Target complexity**
+Part A: Time $O(n)$, Space $O(1)$ extra | `find_duplicates`: Time $O(n)$, Space $O(n)$ |
+Part B: Time $O(n + m)$, Space $O(n + m)$.
+
+**Concept / pattern tested**
+Two-pointer in-place mutation, merging sorted sequences, `heapq.merge`, distinguishing $O(1)$
+space vs. hash-based solutions (extending Q4 and Q5).
+
+**Why it's asked**
+Q4 solves deduplication with a hash set, but HackerRank OAs frequently restrict extra memory to
+$O(1)$ on sorted arrays. Merging two lists conditionally or in sorted order is also a core
+Deloitte interview question and the exact merge step needed for Q38.
+
+**Source:** Candidate-reported in **HackerRank's own OA** ("Remove Duplicates from Sorted
+Array", in place, [Naukri Code360](https://www.naukri.com/code360/interview-experiences/hackerrank/interview-experience-by-shivam-verma-off-campus-may-2022))
+and **Deloitte** ("Merge two list based on some condition",
+[Glassdoor](https://www.glassdoor.ca/Interview/Deloitte-Python-Developer-Interview-Questions-EI_IE2763.0,8_KO9,25.htm)).
+
+---
+
+## Q37. Balanced parentheses checker
+
+**Difficulty:** Easy
+
+**Problem statement**
+Given a string containing brackets `(`, `)`, `[`, `]`, `{`, `}` (and possibly other characters),
+determine whether every opening bracket is closed by the same type of bracket in the correct
+order.
+
+**Example**
+```
+is_balanced("{[()]}")  -> True
+is_balanced("([)]")    -> False
+is_balanced("(((")     -> False
+is_balanced(")")       -> False
+```
+
+**Expected task**
+Use a Python `list` as a stack with a closing-to-opening lookup dictionary. Handle both classic
+failure cases explicitly: encountering a closing bracket on an empty stack, and finishing the
+loop with unclosed openers still on the stack.
+
+**Starter skeleton**
+```python
+def is_balanced(text: str) -> bool:
+    """Return True if all brackets in text are properly matched and nested."""
+    ...
+```
+
+**Target complexity**
+Time: $O(n)$ | Space: $O(n)$ worst case (all opening brackets).
+
+**Concept / pattern tested**
+LIFO stack using `list.append()` / `list.pop()`, dictionary-driven pair matching, boundary
+checking.
+
+**Why it's asked**
+This is the single most common stack problem in easy coding screens and fills a gap in Q1–Q30
+(which has no stack question). It also mirrors real parser/bracket-matching logic when
+validating nested JSON or expressions.
+
+**Source:** Listed among **Infosys** easy coding interview questions ("Valid Parentheses",
+[GeeksforGeeks](https://www.geeksforgeeks.org/interview-prep/infosys-coding-interview-questions/))
+and online coding test reports
+([GeeksforGeeks](https://www.geeksforgeeks.org/interview-experiences/backend-developer-internship-interview-experience/)).
+
+---
+
+## Q38. Sort an array without `sort()` (Merge Sort) and print alternate elements
+
+**Difficulty:** Easy
+
+**Problem statement**
+Part A: implement an $O(n \log n)$ sorting algorithm (Merge Sort) that returns a new sorted
+list **without** calling `sorted()` or `list.sort()`.
+Part B: return every second element (indices `0, 2, 4, ...`) of the sorted array.
+
+**Example**
+```
+merge_sort([5, 2, 9, 1, 5, 6])        -> [1, 2, 5, 5, 6, 9]
+sorted_alternates([5, 2, 9, 1, 5, 6]) -> [1, 5, 6]
+```
+
+**Expected task**
+Write recursive divide-and-conquer Merge Sort (reusing the merge step from Q36). Verify it does
+not mutate the input list. Then explain why Python's built-in Timsort (`sorted()` / `.sort()`)
+is preferred in production, and state the stability and space trade-offs.
+
+**Starter skeleton**
+```python
+def merge_sort(arr: list[int]) -> list[int]:
+    """Return a new sorted list using Merge Sort (no built-in sort)."""
+    ...
+
+
+def sorted_alternates(arr: list[int]) -> list[int]:
+    """Return alternate elements (step 2) after sorting arr."""
+    ...
+```
+
+**Target complexity**
+Time: $O(n \log n)$ | Space: $O(n)$ (plus $O(\log n)$ recursion stack).
+
+**Concept / pattern tested**
+Divide-and-conquer recursion, merging sorted halves, strided slicing `[::2]`, Timsort
+characteristics.
+
+**Why it's asked**
+"Write a program to sort an array" (without built-ins) is reported repeatedly at Infosys and
+Wipro. Candidates often default to $O(n^2)$ bubble sort; writing clean Merge Sort in 15 lines
+immediately signals stronger fundamentals.
+
+**Source:** Candidate-reported at **Infosys** (3 YOE Technology Analyst,
+[GeeksforGeeks](https://www.geeksforgeeks.org/infosys-interview-experience-2023-2/)), **Wipro**
+([Glassdoor](https://www.glassdoor.com/Interview/Wipro-Automation-Engineer-Interview-Questions-EI_IE9936.0,5_KO6,25.htm)),
+and **Cognizant** HackerRank ("Sorting and printing alternate numbers",
+[GeeksforGeeks](https://www.geeksforgeeks.org/cognizant-interview-experience-set-2-campus/)).
+
+---
+
+## Q39. OOP & dunder methods: Shape Classes and Shopping Cart
+
+**Difficulty:** Easy
+
+**Problem statement**
+Implement two small OOP suites matching HackerRank's locked-template style:
+- **Part A (Shapes):** `Rectangle(length, width)` and `Circle(radius)`, each exposing an
+  `.area()` method using `math.pi`.
+- **Part B (Shopping Cart):** `Item(name, price)` and `ShoppingCart` supporting `.add(item)`,
+  `.total()` (sum of prices), and `len(cart)` (total number of items added, including repeated
+  items).
+
+**Example**
+```python
+f"{Rectangle(2, 3).area():.2f}"  # "6.00"
+f"{Circle(1).area():.2f}"        # "3.14"
+
+cart = ShoppingCart()
+cart.add(Item("Bike", 1000))
+cart.add(Item("Lock", 50))
+len(cart)                        # 2
+cart.total()                     # 1050
+```
+
+**Expected task**
+Implement `__init__` and `__len__` cleanly (consider `@dataclass(frozen=True, slots=True)` for
+`Item`). Explain why using `3.14` instead of `math.pi` fails hidden test cases, and why storing
+`_items = []` as a class attribute instead of inside `__init__` is a bug across multiple
+`ShoppingCart` instances.
+
+**Starter skeleton**
+```python
+class Rectangle:
+    def __init__(self, length: float, width: float) -> None:
+        ...
+
+    def area(self) -> float:
+        ...
+
+
+class Circle:
+    def __init__(self, radius: float) -> None:
+        ...
+
+    def area(self) -> float:
+        ...
+
+
+class Item:
+    def __init__(self, name: str, price: int) -> None:
+        ...
+
+
+class ShoppingCart:
+    def __init__(self) -> None:
+        ...
+
+    def add(self, item: Item) -> None:
+        ...
+
+    def total(self) -> int:
+        ...
+
+    def __len__(self) -> int:
+        ...
+```
+
+**Target complexity**
+`area()`: $O(1)$ | `add()` and `len()`: $O(1)$ | `total()`: $O(n)$ (or $O(1)$ with a running
+total).
+
+**Concept / pattern tested**
+Python OOP basics (`__init__`, `self`), dunder protocol (`__len__`), instance vs. class
+attributes, floating-point precision (`math.pi`).
+
+**Why it's asked**
+Both problems appear verbatim in HackerRank's Python (Basic) Skills Certification test, which
+mirrors the OOP style used in service-company OAs. They test whether your classes integrate
+cleanly with Python built-ins like `len()`.
+
+**Source:** **HackerRank Python (Basic) Certification** —
+[Shape Classes with Area](https://www.azhark.com/2023/04/07/hackerrank-python-basic-certification-solutions/)
+and [Shopping Cart](https://gist.github.com/ZakriaJanjua/95844e774d54cfb56796defe016ff753)
+([candidate write-up](https://medium.com/@j622amilah/hackerrank-tests-python-3420011863a1)).
+
+---
+
+## Q40. OOP & dunder methods: $O(1)$ Multiset implementation
+
+**Difficulty:** Easy
+
+**Problem statement**
+Implement a `Multiset` class (a bag that allows duplicate values) supporting four operations:
+- `add(val)`: inserts one copy of `val`.
+- `remove(val)`: removes **one** copy of `val` if present; if absent, do nothing (no exception).
+- `val in m`: returns `True` if at least one copy of `val` is present, else `False`.
+- `len(m)`: returns the total number of elements stored (counting duplicates).
+
+**Example**
+```python
+m = Multiset()
+m.add(1)
+m.add(1)
+m.remove(1)
+1 in m      # True
+len(m)      # 1
+m.remove(1)
+1 in m      # False
+m.remove(9) # silent no-op
+```
+
+**Expected task**
+Do **not** back the class with a plain `list` (where `remove` and `in` are $O(n)$). Use a
+`dict` or `collections.Counter` plus a running `_size` integer so every operation runs in
+$O(1)$ average time. Watch the zero-count bug: if you use a plain `dict`, delete keys whose
+count drops to `0` (or verify `count > 0` in `__contains__`).
+
+**Starter skeleton**
+```python
+class Multiset:
+    """A bag supporting duplicate values with O(1) average operations."""
+
+    def __init__(self) -> None:
+        ...
+
+    def add(self, val: int) -> None:
+        ...
+
+    def remove(self, val: int) -> None:
+        ...
+
+    def __contains__(self, val: int) -> bool:
+        ...
+
+    def __len__(self) -> int:
+        ...
+```
+
+**Target complexity**
+Time: $O(1)$ average for `add`, `remove`, `__contains__`, `__len__` | Space: $O(k)$ where $k$ is
+the number of distinct elements.
+
+**Concept / pattern tested**
+Dunder methods (`__contains__`, `__len__`), `Counter` / hash-map backed data structure design,
+maintaining invariants (`_size`), silent no-op semantics.
+
+**Why it's asked**
+A canonical HackerRank Python (Basic) certification problem. Most junior solutions use a
+`list`, so delivering an $O(1)$ `Counter`-backed design is an immediate seniority signal at 3
+years of experience.
+
+**Source:** **HackerRank Python (Basic) Certification** — Multiset Implementation
+([GitHub repo 1](https://github.com/MD-MAFUJUL-HASAN/HackerRank-Python-Basic-Skills-Certification-Test),
+[GitHub repo 2](https://github.com/sanskritilakhmani/Hackerrank/blob/main/Certification_Test_Python/Basic/Multiset_Implementation)).
+
+---
+
+## Q41. Dominant Cells in a 2D grid
+
+**Difficulty:** Easy
+
+**Problem statement**
+Given an $R \times C$ 2D grid of integers, count how many cells are **dominant**. A cell
+`(r, c)` is dominant if its value is **strictly greater** than every one of its valid neighbors
+(up to 8 neighbors: horizontal, vertical, and diagonal). Edge and corner cells have fewer
+neighbors.
+
+**Example**
+```
+grid = [
+    [1, 2, 7],
+    [4, 5, 6],
+    [8, 8, 9],
+]
+Output: 2   # 7 at (0, 2) and 9 at (2, 2); neither 8 is strictly greater than the other
+```
+
+**Expected task**
+Iterate over the 8 directional offsets `dr, dc in (-1, 0, 1)` skipping `(0, 0)`, with clean
+bounds checking (`0 <= nr < rows` and `0 <= nc < cols`). Verify how ties behave (`>=`
+disqualifies the cell) and handle a $1 \times 1$ grid (1 dominant cell, since it has no
+neighbors).
+
+**Starter skeleton**
+```python
+def num_dominant_cells(grid: list[list[int]]) -> int:
+    """Return the count of cells strictly greater than all 8-way neighbors."""
+    ...
+```
+
+**Target complexity**
+Time: $O(R \cdot C)$ (at most 8 neighbor checks per cell) | Space: $O(1)$ extra.
+
+**Concept / pattern tested**
+2D matrix traversal, 8-neighbor offset loops, bounds checking, strict vs. non-strict inequality
+edge cases.
+
+**Why it's asked**
+Another frequent HackerRank Python (Basic) certification problem — and Q1–Q30 contains zero 2D
+matrix questions. Matrix neighbor scanning is also the base layer for BFS/DFS grid problems.
+
+**Source:** **HackerRank Python (Basic) Certification** — Dominant Cells
+([Medium write-up](https://medium.com/@j622amilah/hackerrank-tests-python-3420011863a1),
+[GitHub repo](https://github.com/adminazhar/HackerRank-Python-Basic-Skills-Certification-Test-Solution)).
+
+---
+
+## Q42. Lexicographical binary substring replacement
+
+**Difficulty:** Intermediate
+
+**Problem statement**
+You are given a binary string `s` of arbitrary length $n$ ($1 \le n \le 10^5$, not limited to 3
+digits) containing only `'0'` and `'1'`. Normalize `s` in a single left-to-right pass using a
+zero-based index `i = 0`. While `i <= n - 3`, inspect `s[i:i+3]`:
+1. If it is `"110"`, replace it with `"101"` (its lexicographically smaller counterpart) and
+   advance `i += 3`.
+2. If it is `"111"`, keep `"111"` unchanged and advance `i += 3`.
+3. Otherwise, keep `s[i]` unchanged and advance `i += 1`.
+
+Once `i > n - 3`, append any remaining tail characters unchanged and return the resulting
+string.
+
+**Example**
+```
+Input:  "110"           -> Output: "101"
+Input:  "110111"        -> Output: "101111"
+Input:  "011001111100"  -> Output: "010101111010"
+Input:  "1110"          -> Output: "1110"   # "111" skips 3, so "110" is never matched
+```
+
+**Expected task**
+Implement with a `while` loop and a list accumulator + `"".join()` (avoiding $O(n^2)$
+`result += ...` at $n = 10^5$). Explain why `s.replace("110", "101")` fails on `"1110"` and
+`"11110"`. Test short strings ($n < 3$), overlapping blocks (`"11110"`), and tails of length
+0, 1, and 2.
+
+**Starter skeleton**
+```python
+def normalize_binary(s: str) -> str:
+    """Apply single-pass lexicographical 3-char substring rules and return the normalized string."""
+    ...
+```
+
+**Target complexity**
+Time: $O(n)$ | Space: $O(n)$.
+
+**Concept / pattern tested**
+Deterministic left-to-right simulation, variable-stride pointer movement (`while` vs. `for`),
+$O(n)$ string building, spec-reading discipline.
+
+**Why it's asked**
+Asked directly in your Accenture AI Engineer OA. It looks like a one-line `.replace()` problem,
+which acts as a trap for candidates who don't trace the skip-by-3 rule on `"111"` blocks.
+
+**Source:** First-hand OA — **Accenture AI Engineer HackerRank Assessment** (10 Oct 2026, Q1;
+logged in `Python Interview & HackerRank Question Bank service-Based_compnay.md`).
+
+---
+
+## Q43. Maximum subarray sum (Kadane's algorithm)
+
+**Difficulty:** Intermediate
+
+**Problem statement**
+Given a non-empty list of integers (which may contain negative numbers), find the contiguous
+non-empty subarray with the largest sum and return that sum.
+
+**Example**
+```
+Input:  [1, 2, 3, -2, 5]                -> 9    # entire array
+Input:  [-2, 1, -3, 4, -1, 2, 1, -5, 4] -> 6    # [4, -1, 2, 1]
+Input:  [-3, -1, -2]                    -> -1   # all-negative edge case
+```
+
+**Expected task**
+State the $O(n^2)$ brute-force approach first, then implement Kadane's algorithm in a single
+pass. Initialize `cur` and `best` from `arr[0]` (not `0`) so all-negative inputs work properly.
+Bonus: return the `(start, end)` indices of the winning subarray as well.
+
+**Starter skeleton**
+```python
+def max_subarray_sum(arr: list[int]) -> int:
+    """Return the maximum sum of any non-empty contiguous subarray."""
+    ...
+```
+
+**Target complexity**
+Time: $O(n)$ | Space: $O(1)$.
+
+**Concept / pattern tested**
+Dynamic programming state compression (extend vs. restart), handling all-negative inputs,
+linear-time optimization.
+
+**Why it's asked**
+Featured directly on HackerRank's official Python interview prep blog and widely used as the
+gateway medium problem in lateral OAs.
+
+**Source:** **HackerRank Blog**
+(["8 Python Interview Questions Developers Should Know"](https://www.hackerrank.com/blog/python-interview-questions-developers-should-know/),
+#2 — Maximum Subarray Sum).
+
+---
+
+## Q44. Product of array except self (no division)
+
+**Difficulty:** Intermediate
+
+**Problem statement**
+Given a list of integers `nums`, return a list `out` such that `out[i]` equals the product of
+all elements of `nums` except `nums[i]`. Solve it in $O(n)$ time **without** using the division
+operator.
+
+**Example**
+```
+Input:  [1, 2, 3, 4]      -> [24, 12, 8, 6]
+Input:  [-1, 1, 0, -3, 3] -> [0, 0, 9, 0, 0]
+```
+
+**Expected task**
+Do a left-to-right prefix product pass into `out`, then a right-to-left suffix product pass
+multiplying into `out` in place. Explain why division breaks (or gets messy) when `nums`
+contains one or more zeros.
+
+**Starter skeleton**
+```python
+def product_except_self(nums: list[int]) -> list[int]:
+    """Return array where out[i] is the product of all elements except nums[i], without division."""
+    ...
+```
+
+**Target complexity**
+Time: $O(n)$ | Space: $O(1)$ extra (excluding the output array).
+
+**Concept / pattern tested**
+Prefix and suffix accumulation, two-pass array sweeps, avoiding division-by-zero edge cases.
+
+**Why it's asked**
+Candidate-reported directly in EY Python Developer interviews. It tests whether you can
+decompose a seemingly quadratic calculation into two clean linear passes.
+
+**Source:** Candidate-reported at **EY** ("2 leet code problems using python ex list product
+self", [Glassdoor](https://www.glassdoor.com/Interview/EY-Python-Developer-Interview-Questions-EI_IE2784.0,2_KO3,19.htm)).
+
+---
+
+## Q45. Minimum CPU cores for overlapping processes (sweep-line)
+
+**Difficulty:** Intermediate
+
+**Problem statement**
+You are given two lists, `start` and `end`, where the $i$-th process runs from `start[i]` to
+`end[i]` **inclusive**. Find the minimum number of CPU cores required so that no two
+overlapping processes share a core at the same time.
+
+**Example**
+```
+start = [1, 2, 5], end = [3, 4, 6]   -> 2
+start = [1, 3],    end = [3, 5]      -> 2   # end is inclusive, so t=3 overlaps
+```
+
+**Expected task**
+Convert each interval into two events (`start` and `end`), sort all events, and sweep a running
+`active` counter while tracking the peak. Get the tie-break order right when a process ends at
+the exact timestamp another starts (inclusive vs. exclusive end times — contrast this with Q18).
+Also discuss the min-heap alternative.
+
+**Starter skeleton**
+```python
+def min_cpu_cores(start: list[int], end: list[int]) -> int:
+    """Return the minimum cores needed so no two inclusive-end processes overlap."""
+    ...
+```
+
+**Target complexity**
+Time: $O(n \log n)$ | Space: $O(n)$.
+
+**Concept / pattern tested**
+Sweep-line event sorting, tie-breaking tuple keys (`(time, event_type)`), inclusive vs.
+exclusive boundary semantics (extending Q18).
+
+**Why it's asked**
+While Q18 merges intervals, scheduling/concurrency questions ("minimum meeting rooms / CPU
+cores") test the complementary sweep-line pattern and trip candidates up on boundary
+tie-breaks.
+
+**Source:** Reported in **Accenture** HackerRank OA prep
+([interviewfox.ai](https://interviewfox.ai/interview-questions/accenture-hackerrank/) — flagged
+as an unverified marketing source in the Service-Based Question Bank); complements the interval
+pattern on the [HackerRank Blog](https://www.hackerrank.com/blog/python-interview-questions-developers-should-know/).
+
+---
+
+## Q46. Desired Array: sum of k smallest non-divisible positives
+
+**Difficulty:** Intermediate
+
+**Problem statement**
+Given a list of positive integers `arr` and a positive integer `k`, find the sum of the `k`
+smallest positive integers ($1, 2, 3, \dots$) that are **not** divisible by any element in
+`arr`. If no such integers exist (for example, `1` is in `arr`), return `0`.
+
+**Example**
+```
+arr = [2, 3, 4, 5, 6], k = 4
+Valid integers: 1, 7, 11, 13
+Output: 32
+```
+
+**Expected task**
+Deduplicate `arr`, guard against `1 in arr` to prevent an infinite loop, and scan positive
+candidates using `all(n % d != 0 for d in divisors)`. Then optimize the divisor list by
+removing redundant multiples (e.g., `4` and `6` are redundant once `2` is present) and discuss
+how far brute-force scales versus inclusion-exclusion.
+
+**Starter skeleton**
+```python
+def desired_array_sum(arr: list[int], k: int) -> int:
+    """Return the sum of the k smallest positive integers not divisible by any item in arr."""
+    ...
+```
+
+**Target complexity**
+Time: $O(\text{ans} \cdot |D|)$ where $D$ is reduced distinct divisors | Space: $O(|D|)$.
+
+**Concept / pattern tested**
+Divisibility filtering, `all()` short-circuiting, redundant-divisor pruning, infinite-loop edge
+case guards (`1 in arr`).
+
+**Why it's asked**
+Reported in Accenture's Cognitive & Technical OA. It checks clean loop termination, defensive
+edge-case handling, and basic pre-filtering optimization.
+
+**Source:** Candidate-reported in **Accenture OA** (Cognitive & Technical Assessment,
+[LeetCode Discuss](https://leetcode.com/discuss/interview-question/3694490/Accenture-OA-(Cognitive-and-Technical-Assessment-2023)-Questions-and-Answers/)).
+
+---
+
+## Q47. Count subsequences of equal elements (modulo $10^9 + 7$)
+
+**Difficulty:** Intermediate
+
+**Problem statement**
+Given a list of integers `arr`, return the total number of non-empty **subsequences** in which
+all elements are equal. Because the answer can be large, return it modulo $10^9 + 7$.
+
+**Example**
+```
+Input:  [1, 2, 1]
+Output: 4    # valid subsequences: [1] (idx 0), [1] (idx 2), [1, 1], [2]
+
+Input:  [5, 5, 5]
+Output: 7    # 2^3 - 1
+```
+
+**Expected task**
+Count frequencies with `collections.Counter`. For each frequency $c$, add
+$(2^c - 1) \bmod (10^9 + 7)$ using Python's 3-argument modular exponentiation
+`pow(2, c, MOD)`. Explain why generating subsequences explicitly ($O(2^n)$) times out and why
+`pow(2, c, MOD)` beats `(2 ** c) % MOD` for huge $c$.
+
+**Starter skeleton**
+```python
+def count_equal_subsequences(arr: list[int]) -> int:
+    """Return the number of non-empty subsequences with all equal elements, mod 10^9 + 7."""
+    ...
+```
+
+**Target complexity**
+Time: $O(n + k \log c)$ where $k$ is distinct values | Space: $O(k)$.
+
+**Concept / pattern tested**
+Combinatorics ($2^c - 1$ non-empty subsets), frequency counting with `Counter`, modular
+exponentiation (`pow(base, exp, mod)`).
+
+**Why it's asked**
+Candidate-reported in a Deloitte Python Analyst assessment. It looks like a backtracking/DP
+subsequence problem until you spot the frequency-combinatorics reduction.
+
+**Source:** Candidate-reported at **Deloitte** (Analyst Python OA,
+[Naukri Code360](https://www.naukri.com/code360/interview-experiences/deloitte/interview-experience-analyst-jun-2022-exp-0-2-years)).
+
+---
+
+## Q48. Consensus orchestrator for translation quality review (Capstone)
+
+**Difficulty:** Advanced-Intermediate
+
+**Problem statement**
+Implement `review(request, panel)` for a localization platform that evaluates a
+machine-translated text segment across an ordered panel of 5 automated raters (`accuracy`,
+`terminology`, `fluency`, `localization_policy`, `formatting`). Enforce these 7 rules in strict
+order:
+1. **Validate request:** missing/blank `segment.id` or `segment.text` -> `status="invalid"`,
+   `reason=None`, `vote_summary=None`, `trace=[]` (zero rater calls).
+2. **Validate config:** bad config or unexpected internal error -> `status="errored"` with an
+   error message (never raise).
+3. **Retry transient failures:** if a rater raises `RaterUnavailableError` or returns `None`,
+   retry up to `max_retries` times (`1 + max_retries` total attempts), recording one trace
+   entry per attempt (`attempt` 1-indexed). Do not retry other exceptions or malformed
+   responses.
+4. **Confidence filter:** only count votes with `confidence >= min_confidence`;
+   lower-confidence votes increment `invalid` in `vote_summary`.
+5. **Hard-issue short-circuit:** if a counted vote has `hard_issue=True`, immediately return
+   `status="blocked"`, `reason="HARD_ISSUE"` without calling remaining raters.
+6. **Quorum:** after all raters finish, `approvals >= approve_quorum` -> `approved` /
+   `QUORUM_APPROVE`; `rejections >= reject_quorum` -> `rejected` / `QUORUM_REJECT`; if both
+   quorums are met, escalate as a split.
+7. **Escalation:** if no winner, return `escalated` with `INSUFFICIENT_VOTERS` when
+   `responders < min_responders`, else `SPLIT_NO_WINNER`.
+
+**Example**
+```
+Unanimous approval (5/5 above min_confidence):
+-> status="approved", reason="QUORUM_APPROVE", approvals=5, trace length=5
+
+Hard issue on rater #2 (terminology):
+-> status="blocked", reason="HARD_ISSUE", responders=2, trace length=2 (raters 3-5 never called)
+
+Blank segment text ("   "):
+-> status="invalid", reason=None, vote_summary=None, trace=[]
+```
+
+**Expected task**
+Return a result object supporting attribute access (e.g., `result.status`) and `to_dict()` on
+**every** code path (never return `None`). Keep the workflow deterministic, mutate neither
+`request` nor shared mutable defaults, and handle subtle edge cases: `max_retries = 0` (still
+1 attempt), `confidence == min_confidence`, hard issue arriving on a retry, and booleans passed
+where ints are expected. *(See your linked full specification doc
+`./Consensus%20Orchestrator%20for%20Translation%20Accenture%20Agent%20Problem.md` for all 10
+worked samples and 24 edge cases.)*
+
+**Starter skeleton**
+```python
+from __future__ import annotations
+
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
+from typing import Any
+
+
+@dataclass
+class ReviewResult:
+    segment_id: str | None
+    status: str
+    reason: str | None = None
+    vote_summary: dict[str, int] | None = None
+    error: str | None = None
+    trace: list[dict[str, Any]] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        ...
+
+
+def review(request: Mapping[str, Any], panel: Sequence[Any]) -> ReviewResult:
+    """Run the rater panel in order, apply consensus rules, and return a deterministic ReviewResult."""
+    ...
+```
+
+**Target complexity**
+Time: $O(P \cdot (1 + \text{max\_retries}))$ where $P$ is panel size |
+Space: $O(P \cdot (1 + \text{max\_retries}))$ for the audit trace.
+
+**Concept / pattern tested**
+Deterministic agent orchestration, retry state machines, short-circuit control flow, structured
+event tracing, defensive input/config validation, dataclass contracts (combines Q23, Q25, Q29,
+and Q30 instincts).
+
+**Why it's asked**
+Asked directly in your Accenture AI Engineer OA. Modern AI-engineering assessments increasingly
+test deterministic control flow around flaky tools rather than ML math.
+
+**Source:** First-hand OA — **Accenture AI Engineer HackerRank Assessment** (10 Oct 2026, Q2;
+logged in `Python Interview & HackerRank Question Bank service-Based_compnay.md` and
+`Consensus Orchestrator for Translation Accenture Agent Problem.md`).
+
+---
+
+## After you finish all 48
 
 You should be able to do these without notes:
 
@@ -1639,5 +2670,9 @@ You should be able to do these without notes:
 - Write a decorator with arguments, a generator, and a context manager from a blank file.
 - Implement chunking, cosine similarity, retry/backoff, caching and JSON validation from scratch
   — and then explain why you'd use a library for each in production.
+- Write classic service-company & HackerRank staples cold: Fibonacci/Sieve/GCD, Merge Sort,
+  two-pointer in-place dedup, balanced brackets, OOP dunder classes (`__len__`, `__contains__`),
+  8-neighbor 2D grid checks, Kadane's algorithm, prefix/suffix product, sweep-line scheduling,
+  and deterministic multi-step agent orchestration.
 
 Progress and notes: see `progress-tracker.md` in this folder.
